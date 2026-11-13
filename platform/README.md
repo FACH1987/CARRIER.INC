@@ -15,3 +15,5 @@ El hosting Sites aplica las migraciones de producción durante el despliegue. La
 Las cargas se consultan públicamente. Publicarlas requiere iniciar sesión con ChatGPT. Los datos de contacto se publican con consentimiento. No se importan los datos del almacenamiento local del prototipo.
 
 Web: [RutaCarga Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
+
+Identidad visual: RutaCarga por Güegüense Digital, con azul marino, azul eléctrico y celeste.
