@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f6f7f4">
-    <meta name="description" content="Encuentra cargas disponibles o publica tu próximo envío en RutaCarga.">
-    <title>RutaCarga — Cargas que mueven tu negocio</title>
+    <meta name="description" content="Plataforma para empresas y transportistas en Nicaragua. Publica cargas y encuentra transporte por origen, destino y equipo.">
+    <title>RutaCarga Nicaragua — Empresas y transportistas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -32,9 +32,9 @@
     <main>
       <section class="hero" id="cargas">
         <div class="hero-copy">
-          <div class="eyebrow"><span class="eyebrow-dot"></span> EL TABLÓN DE CARGA QUE SÍ SE MUEVE</div>
-          <h1>Tu próximo viaje<br>empieza <span class="text-highlight">aquí.</span></h1>
-          <p>Conectamos empresas con transportistas listos para mover carga. Encuentra tu próxima ruta o publica un envío en minutos.</p>
+          <div class="eyebrow"><span class="eyebrow-dot"></span> EMPRESAS Y TRANSPORTISTAS · NICARAGUA</div>
+          <h1>Tu próxima carga.<br>Tu ruta en <span class="text-highlight">Nicaragua.</span></h1>
+          <p>¿Necesitas transporte en Nicaragua? Publica tu carga. ¿Eres transportista? Encuentra envíos por origen, destino y equipo, y contacta a la empresa.</p>
           <div class="hero-actions">
             <a class="button button-dark" href="#tablero">Encontrar cargas <span aria-hidden="true">↓</span></a>
             <button class="button button-light" id="open-post-hero" type="button"><span class="plus-icon" aria-hidden="true">＋</span> Publicar una carga</button>
@@ -51,11 +51,11 @@
             <circle cx="78" cy="246" r="13" fill="#fff" stroke="#88a46c" stroke-width="4"/><circle cx="436" cy="172" r="13" fill="#fff" stroke="#88a46c" stroke-width="4"/>
             <rect x="177" y="46" width="166" height="70" rx="14" fill="#fff" stroke="#e7e9e3"/>
             <circle cx="202" cy="81" r="14" fill="#edf3e6"/><path d="M196 82h12m-6-6v12" stroke="#618044" stroke-width="2" stroke-linecap="round"/>
-            <text x="225" y="75" fill="#829079" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" letter-spacing="1">RUTA ACTIVA</text>
-            <text x="225" y="96" fill="#293129" font-family="Manrope, sans-serif" font-size="15" font-weight="800">Dallas → Houston</text>
+            <text x="225" y="75" fill="#829079" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" letter-spacing="1">RUTA DE EJEMPLO</text>
+            <text x="225" y="96" fill="#293129" font-family="Manrope, sans-serif" font-size="13" font-weight="800">Managua → León</text>
             <rect x="89" y="274" width="118" height="43" rx="12" fill="#fff" stroke="#e7e9e3"/>
             <text x="106" y="292" fill="#899184" font-family="DM Sans, sans-serif" font-size="9" font-weight="600" letter-spacing=".8">CARGA LISTA</text>
-            <text x="106" y="308" fill="#313a30" font-family="Manrope, sans-serif" font-size="12" font-weight="700">Hoy · 8:00 AM</text>
+            <text x="106" y="308" fill="#313a30" font-family="Manrope, sans-serif" font-size="12" font-weight="700">Fecha de ejemplo</text>
             <g transform="translate(282 198)">
               <ellipse cx="46" cy="85" rx="87" ry="15" fill="#e6e9df"/>
               <path d="M2 32a9 9 0 0 1 9-9h97a11 11 0 0 1 11 11v35H2V32Z" fill="#647b50"/>
@@ -72,10 +72,10 @@
               <circle cx="19" cy="23" r="11" fill="#f3f5ef"/>
               <path d="M15 23h8m-4-4v8" stroke="#6b8258" stroke-width="1.7" stroke-linecap="round"/>
               <text x="37" y="20" fill="#829079" font-family="DM Sans, sans-serif" font-size="8" font-weight="600">PAGO OFRECIDO</text>
-              <text x="37" y="34" fill="#293129" font-family="Manrope, sans-serif" font-size="12" font-weight="800">$1,850</text>
+              <text x="37" y="34" fill="#293129" font-family="Manrope, sans-serif" font-size="12" font-weight="800">C$8,500</text>
             </g>
           </svg>
-          <div class="visual-caption"><span class="pulse-dot"></span> NUEVAS OPORTUNIDADES, CADA DÍA</div>
+          <div class="visual-caption"><span class="pulse-dot"></span> CONECTANDO CARGAS EN NICARAGUA</div>
         </div>
         <div class="hero-bottom">
           <span>RUTAS EN MOVIMIENTO</span><span class="hero-line"></span><strong>De una ciudad a otra, sin rodeos.</strong>
@@ -87,8 +87,8 @@
           <div>
             <div class="eyebrow section-eyebrow"><span class="eyebrow-dot"></span> OPORTUNIDADES ABIERTAS</div>
             <h2>Cargas para tu próxima ruta<span class="heading-period">.</span></h2>
-            <p class="section-description">Explora cargas disponibles y encuentra una que se ajuste a tu viaje.</p>
-            <p class="demo-notice">Las cargas iniciales son ejemplos. Publica una carga propia para probar el contacto por correo.</p>
+            <p class="section-description">Encuentra cargas en Nicaragua por municipio o departamento y tipo de equipo.</p>
+            <p class="demo-notice">Versión de demostración: las cargas iniciales son ficticias. Las publicaciones se guardan solo en este navegador; aún no se comparten con otros usuarios.</p>
           </div>
           <div class="board-meta"><span class="live-dot"></span><strong id="load-count">0</strong> cargas disponibles</div>
         </div>
@@ -96,12 +96,12 @@
         <form class="search-panel" id="search-form">
           <label class="search-field">
             <span class="field-icon" aria-hidden="true">⌖</span>
-            <span class="field-content"><span class="field-label">ORIGEN</span><input id="origin-filter" type="search" placeholder="Ciudad o estado" autocomplete="off"></span>
+            <span class="field-content"><span class="field-label">ORIGEN</span><input id="origin-filter" type="search" placeholder="Municipio o departamento" autocomplete="off"></span>
           </label>
           <span class="search-divider" aria-hidden="true"></span>
           <label class="search-field">
             <span class="field-icon destination-icon" aria-hidden="true">⌖</span>
-            <span class="field-content"><span class="field-label">DESTINO</span><input id="destination-filter" type="search" placeholder="¿A dónde vas?" autocomplete="off"></span>
+            <span class="field-content"><span class="field-label">DESTINO</span><input id="destination-filter" type="search" placeholder="Ej. León" autocomplete="off"></span>
           </label>
           <span class="search-divider" aria-hidden="true"></span>
           <label class="search-field equipment-field">
@@ -109,10 +109,10 @@
             <span class="field-content"><span class="field-label">TIPO DE EQUIPO</span>
               <select id="equipment-filter">
                 <option value="">Todos los equipos</option>
-                <option value="Dry Van">Dry Van</option>
-                <option value="Reefer">Reefer</option>
-                <option value="Flatbed">Flatbed</option>
-                <option value="Power Only">Power Only</option>
+                <option value="Furgón cerrado">Furgón cerrado</option>
+                <option value="Refrigerado">Refrigerado</option>
+                <option value="Plataforma">Plataforma</option>
+                <option value="Cabezal">Cabezal</option>
               </select>
             </span>
           </label>
@@ -143,14 +143,14 @@
           <p>Sin procesos complicados. Solo conexiones directas entre quien envía y quien mueve.</p>
         </div>
         <div class="steps-grid">
-          <article class="step-card"><div class="step-number">01 <span>—</span></div><div class="step-icon" aria-hidden="true">⌕</div><h3>Encuentra tu carga</h3><p>Busca por origen, destino y tipo de equipo. La próxima oportunidad está más cerca de lo que piensas.</p></article>
-          <article class="step-card"><div class="step-number">02 <span>—</span></div><div class="step-icon contact-step-icon" aria-hidden="true">↗</div><h3>Habla directo</h3><p>Contacta a la empresa que publicó la carga. Sin intermediarios ni pasos innecesarios.</p></article>
+          <article class="step-card"><div class="step-number">01 <span>—</span></div><div class="step-icon" aria-hidden="true">⌕</div><h3>Encuentra tu carga</h3><p>Transportistas: busca cargas por municipio, departamento y equipo para planificar tu próxima ruta en Nicaragua.</p></article>
+          <article class="step-card"><div class="step-number">02 <span>—</span></div><div class="step-icon contact-step-icon" aria-hidden="true">↗</div><h3>Publica tu envío</h3><p>Empresas: publica el origen, destino, fecha y detalles de tu envío para presentar tu necesidad a los transportistas.</p></article>
           <article class="step-card"><div class="step-number">03 <span>—</span></div><div class="step-icon" aria-hidden="true">✓</div><h3>Cierra el trato</h3><p>Acuerda los detalles directamente y ponte en marcha. Así de sencillo es mover el negocio.</p></article>
         </div>
       </section>
     </main>
 
-    <footer class="footer"><a class="brand footer-brand" href="#"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 22.5 13.2 9l4.3 7 3.2-5 6.3 11.5H5Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M10 22.5h15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span><span>ruta<span class="brand-accent">carga</span></span></a><span>Conectando caminos, impulsando negocios.</span><span>© <span id="current-year"></span> RutaCarga</span></footer>
+    <footer class="footer"><a class="brand footer-brand" href="#"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 22.5 13.2 9l4.3 7 3.2-5 6.3 11.5H5Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M10 22.5h15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span><span>ruta<span class="brand-accent">carga</span></span></a><span>Empresas y transportistas en Nicaragua.</span><span>© <span id="current-year"></span> RutaCarga</span></footer>
 
     <dialog class="post-dialog" id="post-dialog" aria-labelledby="dialog-title">
       <form class="post-form" id="post-form">
@@ -159,16 +159,16 @@
           <button class="close-button" id="close-dialog" type="button" aria-label="Cerrar">×</button>
         </div>
         <div class="form-grid">
-          <label class="form-field"><span>Ciudad de origen</span><input name="origin" required maxlength="60" placeholder="Ej. Dallas, TX"></label>
-          <label class="form-field"><span>Ciudad de destino</span><input name="destination" required maxlength="60" placeholder="Ej. Houston, TX"></label>
+          <label class="form-field"><span>Municipio y departamento de origen</span><input name="origin" required maxlength="60" placeholder="Ej. Managua, Managua"></label>
+          <label class="form-field"><span>Municipio y departamento de destino</span><input name="destination" required maxlength="60" placeholder="Ej. León, León"></label>
           <label class="form-field"><span>Fecha de recogida</span><input name="pickupDate" type="date" required></label>
-          <label class="form-field"><span>Tipo de equipo</span><select name="equipment" required><option value="">Selecciona equipo</option><option>Dry Van</option><option>Reefer</option><option>Flatbed</option><option>Power Only</option></select></label>
-          <label class="form-field"><span>Peso (lb)</span><input name="weight" type="number" min="1" max="100000" required placeholder="Ej. 42,000"></label>
-          <label class="form-field"><span>Pago ofrecido (USD)</span><input name="pay" type="number" min="1" max="1000000" step="1" required placeholder="Ej. 1,850"></label>
+          <label class="form-field"><span>Tipo de equipo</span><select name="equipment" required><option value="">Selecciona equipo</option><option>Furgón cerrado</option><option>Refrigerado</option><option>Plataforma</option><option>Cabezal</option></select></label>
+          <label class="form-field"><span>Peso (kg)</span><input name="weight" type="number" min="1" max="100000" required placeholder="Ej. 15000"></label>
+          <label class="form-field"><span>Pago ofrecido (C$)</span><input name="pay" type="number" min="1" max="1000000" step="1" required placeholder="Ej. 8500"></label>
           <label class="form-field"><span>Nombre de la empresa</span><input name="company" required maxlength="80" placeholder="Ej. Logística del Sur"></label>
           <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="operaciones@empresa.com"></label>
         </div>
-        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu publicación se guardará en este navegador. El contacto se realiza directamente por correo.</p>
+        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu publicación se guarda solo en este navegador y aún no es visible para otros usuarios. El contacto abre tu aplicación de correo.</p>
         <div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
       </form>
     </dialog>

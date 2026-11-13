@@ -1,11 +1,71 @@
-const STORAGE_KEY = "rutacarga.loads.v1";
+const STORAGE_KEY = "rutacarga.nicaragua.loads.v1";
 
 const exampleLoads = [
-  { id: "sample-1", origin: "Dallas, TX", destination: "Houston, TX", pickupDate: "2026-11-14", equipment: "Dry Van", weight: 42000, pay: 1850, company: "Lone Star Freight", email: "dispatch@lonestarfreight.example", createdAt: "2026-11-13T10:20:00-06:00", demo: true },
-  { id: "sample-2", origin: "Phoenix, AZ", destination: "Los Angeles, CA", pickupDate: "2026-11-14", equipment: "Reefer", weight: 38000, pay: 1450, company: "Desert Valley Produce", email: "loads@desertvalley.example", createdAt: "2026-11-13T09:10:00-07:00", demo: true },
-  { id: "sample-3", origin: "Atlanta, GA", destination: "Nashville, TN", pickupDate: "2026-11-15", equipment: "Flatbed", weight: 36000, pay: 1125, company: "Piedmont Building Supply", email: "shipping@piedmontsupply.example", createdAt: "2026-11-13T08:30:00-05:00", demo: true },
-  { id: "sample-4", origin: "Chicago, IL", destination: "Indianapolis, IN", pickupDate: "2026-11-14", equipment: "Power Only", weight: 40000, pay: 980, company: "Midwest Logistics Co.", email: "dispatch@midwestlogistics.example", createdAt: "2026-11-12T16:45:00-06:00", demo: true },
-  { id: "sample-5", origin: "Miami, FL", destination: "Orlando, FL", pickupDate: "2026-11-16", equipment: "Dry Van", weight: 28000, pay: 760, company: "Suncoast Wholesale", email: "freight@suncoastwholesale.example", createdAt: "2026-11-12T14:00:00-05:00", demo: true }
+  {
+    "id": "sample-ni-1",
+    "origin": "Managua, Managua",
+    "destination": "León, León",
+    "pickupDate": "2026-11-14",
+    "equipment": "Furgón cerrado",
+    "weight": 15000,
+    "pay": 8500,
+    "company": "Empresa de ejemplo 1",
+    "email": "cargas1@example.com",
+    "createdAt": "2026-11-13T10:00:00-06:00",
+    "demo": true
+  },
+  {
+    "id": "sample-ni-2",
+    "origin": "Chinandega, Chinandega",
+    "destination": "Managua, Managua",
+    "pickupDate": "2026-11-15",
+    "equipment": "Refrigerado",
+    "weight": 10000,
+    "pay": 12000,
+    "company": "Empresa de ejemplo 2",
+    "email": "cargas2@example.com",
+    "createdAt": "2026-11-13T09:00:00-06:00",
+    "demo": true
+  },
+  {
+    "id": "sample-ni-3",
+    "origin": "Masaya, Masaya",
+    "destination": "Granada, Granada",
+    "pickupDate": "2026-11-16",
+    "equipment": "Plataforma",
+    "weight": 8000,
+    "pay": 3500,
+    "company": "Empresa de ejemplo 3",
+    "email": "cargas3@example.com",
+    "createdAt": "2026-11-13T08:00:00-06:00",
+    "demo": true
+  },
+  {
+    "id": "sample-ni-4",
+    "origin": "Estelí, Estelí",
+    "destination": "Matagalpa, Matagalpa",
+    "pickupDate": "2026-11-17",
+    "equipment": "Cabezal",
+    "weight": 18000,
+    "pay": 7000,
+    "company": "Empresa de ejemplo 4",
+    "email": "cargas4@example.com",
+    "createdAt": "2026-11-13T07:00:00-06:00",
+    "demo": true
+  },
+  {
+    "id": "sample-ni-5",
+    "origin": "Rivas, Rivas",
+    "destination": "Managua, Managua",
+    "pickupDate": "2026-11-18",
+    "equipment": "Furgón cerrado",
+    "weight": 6000,
+    "pay": 6500,
+    "company": "Empresa de ejemplo 5",
+    "email": "cargas5@example.com",
+    "createdAt": "2026-11-13T06:00:00-06:00",
+    "demo": true
+  }
 ];
 
 const loadList = document.querySelector("#load-list");
@@ -46,31 +106,35 @@ function escapeHtml(value) {
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO", maximumFractionDigits: 0 }).format(value);
 }
 
 function formatWeight(value) {
-  return `${new Intl.NumberFormat("en-US").format(value)} lb`;
+  return `${new Intl.NumberFormat("es-NI").format(value)} kg`;
 }
 
 function formatDate(value) {
   const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return "Fecha por confirmar";
-  return new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("es-NI", { month: "short", day: "numeric" }).format(date);
 }
 
 function initials(name) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase();
 }
 
+function normalizeSearch(value) {
+  return value.trim().toLocaleLowerCase("es-NI").normalize("NFD").replace(/\p{M}/gu, "");
+}
+
 function getVisibleLoads() {
-  const origin = filters.origin.value.trim().toLocaleLowerCase();
-  const destination = filters.destination.value.trim().toLocaleLowerCase();
+  const origin = normalizeSearch(filters.origin.value);
+  const destination = normalizeSearch(filters.destination.value);
   const equipment = filters.equipment.value;
 
   return loads.filter((load) =>
-    load.origin.toLocaleLowerCase().includes(origin) &&
-    load.destination.toLocaleLowerCase().includes(destination) &&
+    normalizeSearch(load.origin).includes(origin) &&
+    normalizeSearch(load.destination).includes(destination) &&
     (!equipment || load.equipment === equipment)
   ).sort((a, b) => {
     if (filters.sort.value === "pay-desc") return Number(b.pay) - Number(a.pay);

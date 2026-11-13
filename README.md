@@ -1,17 +1,22 @@
-# RutaCarga
+# RutaCarga Nicaragua · Plataforma compartida
 
-MVP web para que empresas publiquen cargas y transportistas las encuentren por origen, destino y equipo.
+La aplicación de producción está en `platform/`. Usa una API y Cloudflare D1 para compartir las cargas entre dispositivos. El prototipo estático de la raíz se conserva como referencia.
 
-## Probar la app
+- Consulta pública de cargas vigentes, filtros y actualización cada 30 segundos.
+- Inicio de sesión con ChatGPT para publicar.
+- Datos validados en el servidor y consultas parametrizadas.
+- El correo del anunciante es público, con consentimiento al publicar.
+- Hasta 10 publicaciones por usuario cada 24 horas.
+- Las cargas de ejemplo del prototipo no se importan.
 
-Abre `index.html` en un navegador moderno. No requiere instalar dependencias ni levantar un servidor.
+## Desarrollo
 
-- Busca y ordena cargas disponibles.
-- Publica una carga con fecha, equipo, peso, pago y correo de contacto.
-- Las cargas que publiques se guardan en el almacenamiento local de ese navegador.
-- El botón de contacto abre el programa de correo predeterminado para las cargas publicadas.
-- Las cargas que aparecen inicialmente son ejemplos ficticios; no representan ofertas reales y su contacto está deshabilitado.
+Desde `platform/`, instala dependencias con `npm ci` y arranca con `npm run dev`. La base de datos local requiere aplicar las migraciones de `platform/drizzle/`; no es la base de datos de producción.
 
-## Límite del MVP
+## Alojamiento
 
-Esta versión no tiene servidor ni base de datos compartida: las publicaciones solo existen en el navegador donde se crearon. Para que distintas empresas y transportistas vean las mismas cargas, el siguiente paso es conectar una API y una base de datos, además de incorporar cuentas y verificación de empresas.
+El proyecto de Sites y la conexión D1 se declaran en `platform/.openai/hosting.json`. Enlace de la web: [RutaCarga Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
+
+## Base de datos elegida
+
+Se mantiene Cloudflare D1 como base de datos activa. Supabase queda como una opción futura; su preparación está en platform/supabase/README.md. No activar la migración ni configurar una suscripción para ella hasta que el usuario decida retomarla.
