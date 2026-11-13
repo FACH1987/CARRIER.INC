@@ -347,3 +347,9 @@ h1, h2, h3, p { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .button, .toast { transition: none; } }
 
 @media (min-width: 651px) { .hero { min-height: 640px; padding-bottom: 100px; } }
+
+/* Logo original y firma de diseño */
+.brand .brand-logo { display: block; width: 50px; height: 44px; object-fit: contain; border-radius: 0; background: transparent; box-shadow: none; flex-shrink: 0; }
+.brand-wordmark small { font-size: 10px; letter-spacing: .1px; font-weight: 500; line-height: 1.4; }
+.footer-brand .brand-logo { width: 47px; height: 42px; padding: 3px; background: #fff; border-radius: 5px; }
+@media (max-width: 650px) { .brand .brand-logo { width: 40px; height: 37px; } .brand-wordmark small { font-size: 8.5px; letter-spacing: 0; } }
