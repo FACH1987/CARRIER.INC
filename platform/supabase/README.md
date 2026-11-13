@@ -9,6 +9,6 @@ Decisión del usuario: mantener Cloudflare D1 como base de datos activa. La migr
 5. Probar lectura, publicación, rechazo de solicitudes anónimas y continuidad de datos.
 6. Activar `DATABASE_PROVIDER=supabase` y desplegar. Conservar D1 durante la verificación para poder revertir.
 
-El inicio de sesión actual con ChatGPT se mantiene. La base de datos PostgreSQL de Supabase usa RLS, sin acceso directo para los roles anon y authenticated; la API del servidor valida y autoriza las operaciones.
+La migración de las cuentas propias de D1 deberá planificarse por separado; no se migran contraseñas automáticamente. La base de datos PostgreSQL de Supabase usa RLS, sin acceso directo para los roles anon y authenticated; la API del servidor valida y autoriza las operaciones.
 
 Documentación: https://supabase.com/docs/guides/getting-started/api-keys

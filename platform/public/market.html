@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
-    <link rel="stylesheet" href="styles.css?v=live-loads-1">
-    <script src="app.js?v=live-loads-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=accounts-1">
+    <script src="app.js?v=accounts-1" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -23,7 +23,7 @@
         <a class="nav-link active" href="#cargas">Buscar cargas</a>
         <a class="nav-link" href="#como-funciona">Cómo funciona</a>
       </nav>
-      <div class="top-actions">
+      <div class="top-actions"><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
         <button class="button button-outline button-small" id="open-post-top" type="button">Publicar carga <span aria-hidden="true">↗</span></button>
       </div>
     </header>
@@ -126,7 +126,7 @@
             <select class="sort-select" id="sort-select"><option value="newest">Más recientes</option><option value="pay-desc">Mayor pago</option><option value="pay-asc">Menor pago</option></select>
           </div>
         </div>
-        <p id="connection-status" role="status" aria-live="polite">Conectando con las cargas compartidas…</p><a id="sign-in" class="button button-light" href="/signin-with-chatgpt?return_to=%2Fmarket.html%3Fpublicar%3D1" target="_top" hidden>Iniciar sesión para publicar ↗</a><div class="load-list" id="load-list" aria-live="polite"></div>
+        <p id="connection-status" role="status" aria-live="polite">Conectando con las cargas compartidas…</p><button id="sign-in" class="button button-light" type="button" hidden>Iniciar sesión o crear cuenta</button><div class="load-list" id="load-list" aria-live="polite"></div>
         <div class="empty-state" id="empty-state" hidden>
           <div class="empty-icon" aria-hidden="true">⌕</div>
           <h3 id="empty-title">Aún no hay cargas publicadas</h3>
@@ -168,8 +168,24 @@
           <label class="form-field"><span>Nombre de la empresa</span><input name="company" required maxlength="80" placeholder="Nombre de tu empresa"></label>
           <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="Tu correo de contacto"></label>
         </div>
-        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán públicos. Para publicar necesitas iniciar sesión. El contacto abre la aplicación de correo.</p>
+        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán públicos. Para publicar necesitas una cuenta de RutaCarga. El contacto abre la aplicación de correo.</p>
         <label class="form-note"><input name="consent" type="checkbox" required> Acepto publicar estos datos y mi correo para recibir consultas sobre esta carga.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
+      </form>
+    </dialog>
+
+    <dialog class="post-dialog account-dialog" id="auth-dialog" aria-labelledby="auth-title">
+      <form class="post-form" id="auth-form">
+        <div class="dialog-heading"><div><div class="eyebrow">TU CUENTA DE RUTACARGA</div><h2 id="auth-title">Iniciar sesión</h2><p id="auth-description">Ingresa tu correo y contraseña para continuar.</p></div><button class="close-button" id="auth-close" type="button" aria-label="Cerrar acceso a cuenta">×</button></div>
+        <div class="account-modes" aria-label="Tipo de acceso"><button type="button" id="auth-login-mode" aria-pressed="true">Iniciar sesión</button><button type="button" id="auth-register-mode" aria-pressed="false">Crear cuenta</button></div>
+        <div class="account-fields">
+          <label class="form-field" id="auth-name-field" hidden><span>Tu nombre o empresa</span><input name="name" autocomplete="name" minlength="2" maxlength="80" disabled></label>
+          <label class="form-field"><span>Correo electrónico</span><input name="email" type="email" autocomplete="username" maxlength="120" required></label>
+          <label class="form-field"><span>Contraseña</span><input name="password" type="password" autocomplete="current-password" minlength="1" maxlength="128" required aria-describedby="auth-password-help"></label>
+          <p id="auth-password-help" class="account-help">Usa la contraseña de tu cuenta de RutaCarga.</p>
+          <label class="form-field" id="auth-confirm-field" hidden><span>Repite la contraseña</span><input name="confirmPassword" type="password" autocomplete="new-password" maxlength="128" disabled></label>
+        </div>
+        <p id="auth-error" class="account-error" role="alert" hidden></p>
+        <div class="dialog-actions"><button class="button button-dark" id="auth-submit" type="submit">Iniciar sesión</button></div>
       </form>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

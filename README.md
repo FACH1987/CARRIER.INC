@@ -3,7 +3,7 @@
 La aplicación de producción está en `platform/`. Usa una API y Cloudflare D1 para compartir las cargas entre dispositivos. El archivo `index.html` de la raíz abre la web publicada para ingresar y consultar datos reales.
 
 - Consulta pública de cargas vigentes, filtros y actualización cada 30 segundos.
-- Inicio de sesión con ChatGPT para publicar.
+- Cuentas propias con correo y contraseña para publicar.
 - Datos validados en el servidor y consultas parametrizadas.
 - El correo del anunciante es público, con consentimiento al publicar.
 - Hasta 10 publicaciones por usuario cada 24 horas.

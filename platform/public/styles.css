@@ -354,3 +354,15 @@ h1, h2, h3, p { margin-top: 0; }
 
 #publish-error { color: #a61b1b; background: #fff1f2; padding: 12px; border-radius: 8px; line-height: 1.6; }
 .empty-state .button { margin: 5px; }
+
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.account-label { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 12px; }
+.account-dialog { width: min(470px, calc(100vw - 30px)); }
+.account-fields { display: grid; gap: 15px; }
+.account-modes { display: flex; gap: 5px; background: #eff5ff; padding: 5px; border-radius: 8px; margin-bottom: 22px; }
+.account-modes button { flex: 1; border: 0; padding: 11px 6px; border-radius: 6px; background: transparent; color: #435b7c; cursor: pointer; font: inherit; }
+.account-modes button[aria-pressed=true] { background: #fff; color: #1d4ed8; font-weight: 700; box-shadow: 0 2px 6px #0a1b4210; }
+.account-help { color: #526380; font-size: 12px; margin: -5px 0 0; line-height: 1.6; }
+.account-error { color: #a61b1b; background: #fff1f2; padding: 12px; border-radius: 8px; line-height: 1.6; }
+.button:disabled { opacity: .65; cursor: wait; transform: none; }
+@media(max-width:650px) { .top-actions { flex-wrap: wrap; justify-content: flex-end; } .account-label { max-width: 100px; } }

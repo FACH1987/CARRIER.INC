@@ -17,7 +17,50 @@ let loads = [];
 let signedIn = false;
 let sessionKnown = false;
 let refreshing = null;
-const signInPath = "/signin-with-chatgpt?return_to=%2Fmarket.html%3Fpublicar%3D1";
+let currentUser = null;
+let authMode = 'login';
+let continueToPublish = false;
+let authBusy = false;
+const authDialog = document.querySelector('#auth-dialog');
+const authForm = document.querySelector('#auth-form');
+function setAccount(user) {
+  currentUser = user;
+  signedIn = Boolean(user);
+  document.querySelector('#sign-in').hidden = signedIn;
+  document.querySelector('#account-login').hidden = signedIn;
+  document.querySelector('#account-logout').hidden = !signedIn;
+  const label = document.querySelector('#account-label');
+  label.hidden = !signedIn;
+  label.textContent = user ? user.name : '';
+}
+function setAuthMode(mode) {
+  if (authBusy) return;
+  authMode = mode;
+  const registering = mode === 'register';
+  const label = registering ? 'Crear cuenta' : 'Iniciar sesión';
+  document.querySelector('#auth-title').textContent = label;
+  document.querySelector('#auth-submit').textContent = label;
+  document.querySelector('#auth-description').textContent = registering ? 'Crea tu cuenta para publicar cargas en Nicaragua.' : 'Ingresa tu correo y contraseña para continuar.';
+  for (const [id, name] of [['#auth-name-field', 'name'], ['#auth-confirm-field', 'confirmPassword']]) {
+    document.querySelector(id).hidden = !registering;
+    authForm.elements.namedItem(name).disabled = !registering;
+    authForm.elements.namedItem(name).required = registering;
+  }
+  const password = authForm.elements.namedItem('password');
+  password.minLength = registering ? 12 : 1;
+  password.autocomplete = registering ? 'new-password' : 'current-password';
+  authForm.elements.namedItem('confirmPassword').setCustomValidity('');
+  document.querySelector('#auth-password-help').textContent = registering ? 'Elige una contraseña de 12 a 128 caracteres.' : 'Usa la contraseña de tu cuenta de RutaCarga.';
+  document.querySelector('#auth-login-mode').setAttribute('aria-pressed', String(!registering));
+  document.querySelector('#auth-register-mode').setAttribute('aria-pressed', String(registering));
+  document.querySelector('#auth-error').hidden = true;
+}
+function openAuth(mode = 'login', publishing = false) {
+  continueToPublish = publishing;
+  setAuthMode(mode);
+  if (!authDialog.open) authDialog.showModal();
+}
+
 async function refreshLoads() {
   if (refreshing) return refreshing;
   refreshing = updateLoads();
@@ -29,7 +72,7 @@ async function updateLoads() {
     if (!response.ok) throw new Error('No se pudieron consultar las cargas.');
     const data = await response.json();
     loads = data.loads;
-    signedIn = data.signedIn;
+    setAccount(data.user || null);
     sessionKnown = true;
     document.querySelector('#sign-in').hidden = signedIn;
     document.querySelector('#connection-status').textContent = 'Conectado · Las cargas se comparten entre dispositivos. Actualización cada 30 segundos.';
@@ -125,8 +168,12 @@ function showToast(message) {
 async function openPostDialog() {
   if (!sessionKnown) await refreshLoads();
   if (!sessionKnown) { showToast('No pudimos verificar tu sesión. Revisa la conexión e intenta de nuevo.'); return; }
-  if (!signedIn) { window.location.assign(signInPath); return; }
+  if (!signedIn) { openAuth('login', true); return; }
   document.querySelector('#publish-error').hidden = true;
+  if (currentUser) {
+    if (!postForm.elements.namedItem('company').value) postForm.elements.namedItem('company').value = currentUser.name;
+    if (!postForm.elements.namedItem('email').value) postForm.elements.namedItem('email').value = currentUser.email;
+  }
   const dateInput = postForm.elements.namedItem("pickupDate");
   const parts = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Managua', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
   const localToday = ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
@@ -168,6 +215,12 @@ postForm.addEventListener("submit", async (event) => {
   try {
     const response = await fetch('/api/loads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newLoad) });
     const result = await response.json();
+    if (response.status === 401) {
+      setAccount(null);
+      postDialog.close();
+      openAuth('login', true);
+      return;
+    }
     if (!response.ok) throw new Error(result.error || 'No pudimos publicar la carga.');
     loads = [result.load, ...loads];
   } catch (error) {
@@ -209,6 +262,66 @@ function clearFilters() {
 document.querySelector("#clear-filters").addEventListener("click", clearFilters);
 document.querySelector("#empty-clear").addEventListener("click", clearFilters);
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
+
+
+document.querySelector('#account-login').addEventListener('click', () => openAuth());
+document.querySelector('#sign-in').addEventListener('click', () => openAuth('login', true));
+document.querySelector('#auth-login-mode').addEventListener('click', () => setAuthMode('login'));
+document.querySelector('#auth-register-mode').addEventListener('click', () => setAuthMode('register'));
+document.querySelector('#auth-close').addEventListener('click', () => { if (!authBusy) authDialog.close(); });
+authDialog.addEventListener('cancel', (event) => { if (authBusy) event.preventDefault(); });
+authDialog.addEventListener('click', (event) => { if (event.target === authDialog && !authBusy) authDialog.close(); });
+authForm.elements.namedItem('confirmPassword').addEventListener('input', (event) => event.target.setCustomValidity(''));
+authForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (authBusy) return;
+  const confirmation = authForm.elements.namedItem('confirmPassword');
+  confirmation.setCustomValidity(authMode === 'register' && confirmation.value !== authForm.elements.namedItem('password').value ? 'Las contraseñas no coinciden.' : '');
+  if (!authForm.reportValidity()) return;
+  const data = new FormData(authForm);
+  const payload = { email: String(data.get('email')).trim(), password: String(data.get('password')) };
+  if (authMode === 'register') payload.name = String(data.get('name')).trim();
+  authBusy = true;
+  const button = document.querySelector('#auth-submit');
+  button.disabled = true;
+  button.textContent = 'Procesando…';
+  document.querySelector('#auth-error').hidden = true;
+  try {
+    const response = await fetch('/api/auth/' + authMode, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'No pudimos completar el acceso.');
+    setAccount(result.user);
+    sessionKnown = true;
+    authForm.reset();
+    authDialog.close();
+    showToast(authMode === 'register' ? 'Tu cuenta está lista.' : 'Sesión iniciada.');
+    if (continueToPublish) await openPostDialog();
+    refreshLoads();
+  } catch (error) {
+    const target = document.querySelector('#auth-error');
+    target.textContent = error.message || 'Revisa tu conexión e intenta de nuevo.';
+    target.hidden = false;
+  } finally {
+    authBusy = false;
+    button.disabled = false;
+    button.textContent = authMode === 'register' ? 'Crear cuenta' : 'Iniciar sesión';
+    authForm.elements.namedItem('password').value = '';
+    confirmation.value = '';
+  }
+});
+document.querySelector('#account-logout').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!response.ok) throw new Error('No pudimos cerrar la sesión. Intenta de nuevo.');
+    setAccount(null);
+    sessionKnown = true;
+    showToast('Sesión cerrada.');
+    refreshLoads();
+  } catch (error) { showToast(error.message || 'Revisa tu conexión.'); }
+  finally { button.disabled = false; }
+});
 
 refreshLoads();
 window.setInterval(refreshLoads, 30000);

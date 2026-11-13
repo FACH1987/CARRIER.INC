@@ -1,8 +1,9 @@
 import { usesSupabase, listSupabaseLoads, countSupabaseLoads, insertSupabaseLoad } from '../../../db/supabase';
-﻿import { getDb } from '../../../db';
+import { getDb } from '../../../db';
 import { loads } from '../../../db/schema';
 import { and, desc, eq, gte, count } from 'drizzle-orm';
 import { z } from 'zod';
+import { currentAccount } from '../../../lib/account-auth';
 
 export const dynamic = 'force-dynamic';
 const dayInNicaragua = () => {
@@ -26,7 +27,8 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
 export async function GET(request: Request) {
   try {
     const data = usesSupabase() ? await listSupabaseLoads(dayInNicaragua()) : await getDb().select({ id: loads.id, origin: loads.origin, destination: loads.destination, pickupDate: loads.pickupDate, equipment: loads.equipment, weight: loads.weight, pay: loads.pay, company: loads.company, email: loads.email, createdAt: loads.createdAt }).from(loads).where(gte(loads.pickupDate, dayInNicaragua())).orderBy(desc(loads.createdAt)).limit(500);
-    return json({ loads: data, signedIn: Boolean(request.headers.get('oai-authenticated-user-id')) });
+    const user = await currentAccount(request);
+    return json({ loads: data, signedIn: Boolean(user), user });
   } catch (error) {
     console.error('No se pudieron consultar las cargas', error);
     return json({ error: 'No pudimos consultar las cargas. Intenta de nuevo.' }, 503);
@@ -34,8 +36,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const ownerId = request.headers.get('oai-authenticated-user-id');
-  if (!ownerId) return json({ error: 'Inicia sesión para publicar una carga.' }, 401);
+  let user;
+  try { user = await currentAccount(request); }
+  catch { return json({ error: 'No pudimos verificar tu sesión. Intenta de nuevo.' }, 503); }
+  if (!user) return json({ error: 'Inicia sesión con tu cuenta de RutaCarga para publicar.' }, 401);
+  const ownerId = `account:${user.id}`;
   if (request.headers.get('origin') !== new URL(request.url).origin) return json({ error: 'Origen de solicitud no válido.' }, 403);
   if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'Formato no válido.' }, 415);
   if (Number(request.headers.get('content-length') || 0) > 8192) return json({ error: 'La solicitud es demasiado grande.' }, 413);
