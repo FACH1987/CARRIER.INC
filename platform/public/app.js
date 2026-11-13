@@ -15,16 +15,31 @@ let toastTimer;
 
 let loads = [];
 let signedIn = false;
+let sessionKnown = false;
+let refreshing = null;
+const signInPath = "/signin-with-chatgpt?return_to=%2Fmarket.html%3Fpublicar%3D1";
 async function refreshLoads() {
+  if (refreshing) return refreshing;
+  refreshing = updateLoads();
+  try { return await refreshing; } finally { refreshing = null; }
+}
+async function updateLoads() {
   try {
     const response = await fetch('/api/loads', { cache: 'no-store' });
     if (!response.ok) throw new Error('No se pudieron consultar las cargas.');
     const data = await response.json();
     loads = data.loads;
     signedIn = data.signedIn;
+    sessionKnown = true;
     document.querySelector('#sign-in').hidden = signedIn;
     document.querySelector('#connection-status').textContent = 'Conectado · Las cargas se comparten entre dispositivos. Actualización cada 30 segundos.';
     renderLoads();
+    if (signedIn && new URLSearchParams(window.location.search).get('publicar') === '1') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('publicar');
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      openPostDialog();
+    }
   } catch (error) {
     document.querySelector('#connection-status').textContent = 'No pudimos actualizar las cargas. Reintentaremos automáticamente; revisa tu conexión.';
   }
@@ -76,20 +91,19 @@ function getVisibleLoads() {
 
 function renderLoads() {
   const visibleLoads = getVisibleLoads();
+  const hasFilters = Boolean(filters.origin.value.trim() || filters.destination.value.trim() || filters.equipment.value);
+  document.querySelector('#empty-title').textContent = hasFilters ? 'No encontramos cargas con esos filtros' : 'Aún no hay cargas publicadas';
+  document.querySelector('#empty-description').textContent = hasFilters ? 'Prueba con otro municipio o equipo, o publica tu propio envío.' : 'Publica la primera carga con los datos de tu envío para que los transportistas puedan contactarte.';
+  document.querySelector('#empty-clear').hidden = !hasFilters;
   countElement.textContent = String(visibleLoads.length);
   emptyState.hidden = visibleLoads.length > 0;
   loadList.hidden = visibleLoads.length === 0;
   loadList.innerHTML = visibleLoads.map((load) => {
-    const companyInfo = load.demo
-      ? `<span class="sample-badge">EJEMPLO</span>`
-      : "";
-    const contactControl = load.demo
-      ? `<span class="button contact-button demo-contact" title="Esta carga es demostrativa; publica una carga para probar el contacto." aria-label="Contacto no disponible para cargas de ejemplo">Contacto demo</span>`
-      : `<a class="button contact-button" href="mailto:${escapeHtml(load.email)}?subject=${encodeURIComponent(`Consulta sobre carga: ${load.origin} a ${load.destination}`)}" aria-label="Contactar a ${escapeHtml(load.company)} por correo">Contactar <span aria-hidden="true">↗</span></a>`;
+    const contactControl = `<a class="button contact-button" href="mailto:${escapeHtml(load.email)}?subject=${encodeURIComponent(`Consulta sobre carga: ${load.origin} a ${load.destination}`)}" aria-label="Contactar a ${escapeHtml(load.company)} por correo">Contactar <span aria-hidden="true">↗</span></a>`;
     return `
       <article class="load-card">
         <div class="route-info">
-          <div class="company-line"><span class="company-avatar">${escapeHtml(initials(load.company))}</span>${escapeHtml(load.company)} ${companyInfo}</div>
+          <div class="company-line"><span class="company-avatar">${escapeHtml(initials(load.company))}</span>${escapeHtml(load.company)}</div>
           <div class="route-cities"><span>${escapeHtml(load.origin)}</span><span class="route-arrow" aria-hidden="true">→</span><span>${escapeHtml(load.destination)}</span></div>
         </div>
         <div class="load-detail"><span class="detail-label">RECOGIDA</span><span class="detail-value">${escapeHtml(formatDate(load.pickupDate))}</span></div>
@@ -108,18 +122,22 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 3300);
 }
 
-function openPostDialog() {
-  if (!signedIn) { window.location.assign('/signin-with-chatgpt?return_to=%2Fmarket.html'); return; }
+async function openPostDialog() {
+  if (!sessionKnown) await refreshLoads();
+  if (!sessionKnown) { showToast('No pudimos verificar tu sesión. Revisa la conexión e intenta de nuevo.'); return; }
+  if (!signedIn) { window.location.assign(signInPath); return; }
+  document.querySelector('#publish-error').hidden = true;
   const dateInput = postForm.elements.namedItem("pickupDate");
   const parts = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Managua', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
   const localToday = ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
   dateInput.min = localToday;
   if (!dateInput.value || dateInput.value < localToday) dateInput.value = localToday;
-  postDialog.showModal();
+  if (!postDialog.open) postDialog.showModal();
 }
 
 document.querySelector("#open-post-top").addEventListener("click", openPostDialog);
 document.querySelector("#open-post-hero").addEventListener("click", openPostDialog);
+document.querySelector("#empty-post").addEventListener("click", openPostDialog);
 document.querySelector("#close-dialog").addEventListener("click", () => postDialog.close());
 document.querySelector("#cancel-dialog").addEventListener("click", () => postDialog.close());
 postDialog.addEventListener("click", (event) => {
@@ -132,7 +150,6 @@ postForm.addEventListener("submit", async (event) => {
 
   const formData = new FormData(postForm);
   const newLoad = {
-    id: `load-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
     origin: String(formData.get("origin")).trim(),
     destination: String(formData.get("destination")).trim(),
     pickupDate: String(formData.get("pickupDate")),
@@ -140,21 +157,25 @@ postForm.addEventListener("submit", async (event) => {
     weight: Number(formData.get("weight")),
     pay: Number(formData.get("pay")),
     company: String(formData.get("company")).trim(),
-    email: String(formData.get("email")).trim(),
-    createdAt: new Date().toISOString()
+    email: String(formData.get("email")).trim()
   };
 
   const button = postForm.querySelector('[type="submit"]');
   button.disabled = true;
+  const originalLabel = button.textContent;
+  button.textContent = "Guardando…";
+  document.querySelector("#publish-error").hidden = true;
   try {
     const response = await fetch('/api/loads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newLoad) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'No pudimos publicar la carga.');
     loads = [result.load, ...loads];
   } catch (error) {
-    showToast(error.message || 'Revisa tu conexión e intenta de nuevo.');
+    const errorElement = document.querySelector('#publish-error');
+    errorElement.textContent = error.message || 'Revisa tu conexión e intenta de nuevo.';
+    errorElement.hidden = false;
     return;
-  } finally { button.disabled = false; }
+  } finally { button.disabled = false; button.textContent = originalLabel; }
 
   postForm.reset();
   postDialog.close();

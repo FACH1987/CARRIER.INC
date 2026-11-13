@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="icon" href="brand-emblem.png" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=gueguense-2">
-    <script src="app.js" defer></script>
+    <link rel="icon" href="brand-emblem.png" type="image/png">
+    <link rel="stylesheet" href="styles.css?v=live-loads-1">
+    <script src="app.js?v=live-loads-1" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -50,11 +50,11 @@
             <circle cx="78" cy="246" r="13" fill="#fff" stroke="#60a5fa" stroke-width="4"/><circle cx="436" cy="172" r="13" fill="#fff" stroke="#60a5fa" stroke-width="4"/>
             <rect x="177" y="46" width="166" height="70" rx="14" fill="#fff" stroke="#dfe9f8"/>
             <circle cx="202" cy="81" r="14" fill="#dfe9f8"/><path d="M196 82h12m-6-6v12" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
-            <text x="225" y="75" fill="#5d718f" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" letter-spacing="1">RUTA DE EJEMPLO</text>
-            <text x="225" y="96" fill="#152d52" font-family="Manrope, sans-serif" font-size="13" font-weight="800">Managua → León</text>
+            <text x="225" y="75" fill="#5d718f" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" letter-spacing="1">TU PRÓXIMA RUTA</text>
+            <text x="225" y="96" fill="#152d52" font-family="Manrope, sans-serif" font-size="13" font-weight="800">Origen → Destino</text>
             <rect x="89" y="274" width="118" height="43" rx="12" fill="#fff" stroke="#dfe9f8"/>
-            <text x="106" y="292" fill="#5d718f" font-family="DM Sans, sans-serif" font-size="9" font-weight="600" letter-spacing=".8">CARGA LISTA</text>
-            <text x="106" y="308" fill="#152d52" font-family="Manrope, sans-serif" font-size="12" font-weight="700">Fecha de ejemplo</text>
+            <text x="106" y="292" fill="#5d718f" font-family="DM Sans, sans-serif" font-size="9" font-weight="600" letter-spacing=".8">PUBLICA TU ENVÍO</text>
+            <text x="106" y="308" fill="#152d52" font-family="Manrope, sans-serif" font-size="12" font-weight="700">Conecta tu carga</text>
             <g transform="translate(282 198)">
               <ellipse cx="46" cy="85" rx="87" ry="15" fill="#dfe9f8"/>
               <path d="M2 32a9 9 0 0 1 9-9h97a11 11 0 0 1 11 11v35H2V32Z" fill="#2563eb"/>
@@ -70,8 +70,8 @@
               <rect width="99" height="47" rx="12" fill="#fff" stroke="#dfe9f8"/>
               <circle cx="19" cy="23" r="11" fill="#eff5ff"/>
               <path d="M15 23h8m-4-4v8" stroke="#2563eb" stroke-width="1.7" stroke-linecap="round"/>
-              <text x="37" y="20" fill="#5d718f" font-family="DM Sans, sans-serif" font-size="8" font-weight="600">PAGO OFRECIDO</text>
-              <text x="37" y="34" fill="#152d52" font-family="Manrope, sans-serif" font-size="12" font-weight="800">C$8,500</text>
+              <text x="37" y="20" fill="#5d718f" font-family="DM Sans, sans-serif" font-size="8" font-weight="600">CONTACTO</text>
+              <text x="37" y="34" fill="#152d52" font-family="Manrope, sans-serif" font-size="12" font-weight="800">Directo</text>
             </g>
           </svg>
           <div class="visual-caption"><span class="pulse-dot"></span> CONECTANDO CARGAS EN NICARAGUA</div>
@@ -87,7 +87,7 @@
             <div class="eyebrow section-eyebrow"><span class="eyebrow-dot"></span> OPORTUNIDADES ABIERTAS</div>
             <h2>Cargas para tu próxima ruta<span class="heading-period">.</span></h2>
             <p class="section-description">Encuentra cargas en Nicaragua por municipio o departamento y tipo de equipo.</p>
-            <p class="demo-notice">Publicaciones compartidas entre empresas y transportistas. Confirma disponibilidad y condiciones directamente con el anunciante.</p>
+            <p class="board-notice">Publicaciones compartidas entre empresas y transportistas. Confirma disponibilidad y condiciones directamente con el anunciante.</p>
           </div>
           <div class="board-meta"><span class="live-dot"></span><strong id="load-count">0</strong> cargas disponibles</div>
         </div>
@@ -126,12 +126,13 @@
             <select class="sort-select" id="sort-select"><option value="newest">Más recientes</option><option value="pay-desc">Mayor pago</option><option value="pay-asc">Menor pago</option></select>
           </div>
         </div>
-        <p id="connection-status" role="status" aria-live="polite">Conectando con las cargas compartidas…</p><a id="sign-in" class="button button-light" href="/signin-with-chatgpt?return_to=%2Fmarket.html" target="_top" hidden>Iniciar sesión para publicar ↗</a><div class="load-list" id="load-list" aria-live="polite"></div>
+        <p id="connection-status" role="status" aria-live="polite">Conectando con las cargas compartidas…</p><a id="sign-in" class="button button-light" href="/signin-with-chatgpt?return_to=%2Fmarket.html%3Fpublicar%3D1" target="_top" hidden>Iniciar sesión para publicar ↗</a><div class="load-list" id="load-list" aria-live="polite"></div>
         <div class="empty-state" id="empty-state" hidden>
           <div class="empty-icon" aria-hidden="true">⌕</div>
-          <h3>No encontramos cargas con esos filtros</h3>
-          <p>Prueba con otro municipio o equipo. Si necesitas transporte, publica tu carga para que los transportistas puedan encontrarla.</p>
+          <h3 id="empty-title">Aún no hay cargas publicadas</h3>
+          <p id="empty-description">Publica la primera carga con los datos de tu envío para que los transportistas puedan contactarte.</p>
           <button class="button button-light" type="button" id="empty-clear">Limpiar búsqueda</button>
+          <button class="button button-dark" type="button" id="empty-post">Publicar carga</button>
         </div>
       </section>
 
@@ -154,21 +155,21 @@
     <dialog class="post-dialog" id="post-dialog" aria-labelledby="dialog-title">
       <form class="post-form" id="post-form">
         <div class="dialog-heading">
-          <div><div class="eyebrow section-eyebrow"><span class="eyebrow-dot"></span> NUEVA OPORTUNIDAD</div><h2 id="dialog-title">Publica una carga<span class="heading-period">.</span></h2><p>Comparte los detalles para conectar con transportistas.</p></div>
+          <div><div class="eyebrow section-eyebrow"><span class="eyebrow-dot"></span> NUEVA OPORTUNIDAD</div><h2 id="dialog-title">Publica una carga<span class="heading-period">.</span></h2><p>Ingresa los datos de tu envío. Tu publicación quedará guardada y visible en el tablero.</p></div>
           <button class="close-button" id="close-dialog" type="button" aria-label="Cerrar">×</button>
         </div>
         <div class="form-grid">
-          <label class="form-field"><span>Municipio y departamento de origen</span><input name="origin" required maxlength="60" placeholder="Ej. Managua, Managua"></label>
-          <label class="form-field"><span>Municipio y departamento de destino</span><input name="destination" required maxlength="60" placeholder="Ej. León, León"></label>
+          <label class="form-field"><span>Municipio y departamento de origen</span><input name="origin" required maxlength="60" placeholder="Municipio y departamento"></label>
+          <label class="form-field"><span>Municipio y departamento de destino</span><input name="destination" required maxlength="60" placeholder="Municipio y departamento"></label>
           <label class="form-field"><span>Fecha de recogida</span><input name="pickupDate" type="date" required></label>
           <label class="form-field"><span>Tipo de equipo</span><select name="equipment" required><option value="">Selecciona equipo</option><option>Furgón cerrado</option><option>Refrigerado</option><option>Plataforma</option><option>Cabezal</option></select></label>
-          <label class="form-field"><span>Peso (kg)</span><input name="weight" type="number" min="1" max="100000" required placeholder="Ej. 15000"></label>
-          <label class="form-field"><span>Pago ofrecido (C$)</span><input name="pay" type="number" min="1" max="1000000" step="1" required placeholder="Ej. 8500"></label>
-          <label class="form-field"><span>Nombre de la empresa</span><input name="company" required maxlength="80" placeholder="Ej. Logística del Sur"></label>
-          <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="operaciones@empresa.com"></label>
+          <label class="form-field"><span>Peso (kg)</span><input name="weight" type="number" min="1" max="100000" required placeholder="Peso total en kg"></label>
+          <label class="form-field"><span>Pago ofrecido (C$)</span><input name="pay" type="number" min="1" max="1000000" step="1" required placeholder="Pago total en córdobas"></label>
+          <label class="form-field"><span>Nombre de la empresa</span><input name="company" required maxlength="80" placeholder="Nombre de tu empresa"></label>
+          <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="Tu correo de contacto"></label>
         </div>
         <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán públicos. Para publicar necesitas iniciar sesión. El contacto abre la aplicación de correo.</p>
-        <label class="form-note"><input name="consent" type="checkbox" required> Acepto publicar estos datos y mi correo para recibir consultas sobre esta carga.</label><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
+        <label class="form-note"><input name="consent" type="checkbox" required> Acepto publicar estos datos y mi correo para recibir consultas sobre esta carga.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
       </form>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

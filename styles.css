@@ -69,7 +69,7 @@ h1, h2, h3, p { margin-top: 0; }
 .section-heading h2 { margin: 11px 0 6px; font-size: 29px; font-weight: 700; letter-spacing: -1.3px; }
 .heading-period { color: var(--primary); }
 .section-description { margin-bottom: 0; color: #5d718f; font-size: 11px; }
-.demo-notice { margin: 8px 0 0; color: #5d718f; font-size: 10px; }
+.board-notice { margin: 8px 0 0; color: #5d718f; font-size: 10px; }
 .board-meta { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; color: #5d718f; font-size: 10px; }
 .board-meta strong { color: #152d52; }
 .live-dot { width: 6px; height: 6px; }
@@ -99,7 +99,6 @@ h1, h2, h3, p { margin-top: 0; }
 .route-info { min-width: 0; }
 .company-line { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; color: #435b7c; font-size: 9px; font-weight: 600; }
 .company-avatar { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; color: #435b7c; background: #dfe9f8; font: 700 8px "Manrope", sans-serif; }
-.sample-badge { padding: 3px 5px; border-radius: 3px; color: #435b7c; background: #eff5ff; font-size: 7px; font-weight: 700; letter-spacing: .5px; }
 .route-cities { display: flex; align-items: center; gap: 9px; font: 700 13px "Manrope", sans-serif; letter-spacing: -.3px; }
 .route-cities > span:first-child, .route-cities > span:last-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .route-arrow { color: #5d718f; font-size: 14px; font-weight: 400; }
@@ -110,7 +109,6 @@ h1, h2, h3, p { margin-top: 0; }
 .pay-value { font: 800 15px "Manrope", sans-serif; letter-spacing: -.5px; }
 .contact-button { min-height: 36px; padding: 0 11px; gap: 7px; border: 1px solid #dfe9f8; background: #fff; border-radius: 5px; font-size: 10px; }
 .contact-button:hover { border-color: #7d92b3; background: #eff5ff; }
-.demo-contact { color: #5d718f; background: #eff5ff; cursor: help; }
 .empty-state { padding: 56px 20px; text-align: center; border: 1px solid var(--line); border-radius: 8px; background: white; }
 .empty-icon { width: 40px; height: 40px; display: grid; place-items: center; margin: 0 auto 13px; border-radius: 50%; color: var(--primary); background: #eff5ff; font-size: 23px; }
 .empty-state h3 { margin-bottom: 6px; font: 700 16px "Manrope", sans-serif; }
@@ -194,7 +192,7 @@ h1, h2, h3, p { margin-top: 0; }
   .section-heading { align-items: flex-start; gap: 10px; }
   .section-heading h2 { font-size: 25px; }
   .section-description { max-width: 260px; font-size: 10px; line-height: 1.6; }
-  .demo-notice { max-width: 280px; font-size: 9px; line-height: 1.5; }
+  .board-notice { max-width: 280px; font-size: 9px; line-height: 1.5; }
   .board-meta { max-width: 98px; flex-wrap: wrap; justify-content: flex-end; gap: 5px; font-size: 9px; }
   .search-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 6px; padding: 12px; }
   .search-field { min-height: 46px; padding: 0 3px; }
@@ -279,7 +277,7 @@ h1, h2, h3, p { margin-top: 0; }
 .board-section { padding-top: 76px; }
 .section-heading h2 { font-size: 32px; }
 .section-description { color: #526380; font-size: 13px; line-height: 1.7; }
-.demo-notice { color: #5d718f; line-height: 1.7; font-size: 11px; max-width: 680px; }
+.board-notice { color: #5d718f; line-height: 1.7; font-size: 11px; max-width: 680px; }
 .search-panel { border-radius: 12px; box-shadow: 0 10px 32px #0a1b4206; }
 .field-label, .detail-label { color: #526380; font-size: 9px; }
 .field-content input, .field-content select { font-size: 12px; }
@@ -330,7 +328,7 @@ h1, h2, h3, p { margin-top: 0; }
   .hero-bottom strong { font-size: 8px; }
   .section-heading h2 { font-size: 27px; }
   .section-description { font-size: 12px; }
-  .demo-notice { font-size: 11px; max-width: 100%; }
+  .board-notice { font-size: 11px; max-width: 100%; }
   .steps-grid { grid-template-columns: 1fr; gap: 24px; }
   .step-card { display: grid; grid-template-columns: 44px 1fr; column-gap: 14px; }
   .step-number { grid-column: 1 / -1; margin-bottom: 8px; }
@@ -349,3 +347,6 @@ h1, h2, h3, p { margin-top: 0; }
 .brand-wordmark small { font-size: 10px; letter-spacing: .1px; font-weight: 500; line-height: 1.4; }
 .footer-brand .brand-logo { width: 47px; height: 42px; padding: 3px; background: #fff; border-radius: 5px; }
 @media (max-width: 650px) { .brand .brand-logo { width: 40px; height: 37px; } .brand-wordmark small { font-size: 8.5px; letter-spacing: 0; } }
+
+#publish-error { color: #a61b1b; background: #fff1f2; padding: 12px; border-radius: 8px; line-height: 1.6; }
+.empty-state .button { margin: 5px; }
