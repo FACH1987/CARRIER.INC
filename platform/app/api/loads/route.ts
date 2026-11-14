@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     const user = await currentAccount(request);
     if (!user) return json({ error: 'Inicia sesión o regístrate para ver las cargas.', user: null, signedIn: false }, 401);
     const mine = new URL(request.url).searchParams.get('mine') === '1';
-    if (!mine && user.role === 'transportista' && !(await carrierDossier(user.id)).ready) return json({ error: 'Completa tu expediente y espera la aprobación de documentos vigentes para ver las cargas.', onboardingRequired: true, user }, 403);
+    if (!mine && user.role === 'transportista' && !(await carrierDossier(user.id)).ready) return json({ error: 'Completa tu expediente con los documentos requeridos y fechas vigentes para ver las cargas.', onboardingRequired: true, user }, 403);
     if (mine && !user) return json({ error: 'Inicia sesión para ver tus cargas.' }, 401);
     if (usesSupabase()) return json({ error: 'La migración debe incluir las operaciones y comisiones antes de cambiar de base de datos.' }, 503);
     const owner = `account:${user.id}`;

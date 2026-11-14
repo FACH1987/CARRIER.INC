@@ -283,8 +283,14 @@ test('local accounts, private carrier documents, verified dispatch and commissio
         ...dossier.drivers[0].checklist.map(item => ({ entityType: 'driver', entityId: driverId, type: item.type })),
         ...dossier.vehicles[0].checklist.map(item => ({ entityType: 'vehicle', entityId: vehicleId, type: item.type }))
       ];
-      for (const slot of slots) assert.equal((await upload({ ...metadata, ...slot })).status, 201);
+      for (const slot of slots.slice(0, -1)) assert.equal((await upload({ ...metadata, ...slot })).status, 201);
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
+      assert.equal((await upload({ ...metadata, ...slots.at(-1) })).status, 201);
+      // The final current document enables access without any administrator review.
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
+      const automatic = await (await api('/api/carrier', { cookie: carrierSession })).json();
+      assert.equal(automatic.ready, true);
+      assert(automatic.drivers[0].checklist.every(item => item.document.reviewedAt === null));
       dossier = await (await api('/api/carrier?userId=' + carrierAccount.id, { cookie: adminCookie })).json();
       const docs = [...dossier.profileChecklist, ...dossier.drivers[0].checklist, ...dossier.vehicles[0].checklist].map(item => item.document);
       const privateUrl = '/api/carrier/documents/' + docs[0].id;
@@ -303,12 +309,14 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       dossier = await (await api('/api/carrier', { cookie: carrierSession })).json();
       assert.equal(dossier.ready, true);
       assert.equal(dossier.vehicles.filter(v => v.ready).length, 1);
-      // A replacement revokes its previous review immediately.
+      // A valid replacement keeps access immediately without a new review.
       const license = dossier.drivers[0].checklist.find(item => item.type === 'license').document;
       assert.equal((await upload(metadata)).status, 201);
-      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
       assert.equal((await review(license)).status, 409);
       const newLicense = (await (await api('/api/carrier', { cookie: carrierSession })).json()).drivers[0].checklist.find(item => item.type === 'license').document;
+      assert.equal((await review(newLicense, adminCookie, { status: 'rejected', note: 'Correction required for fixture' })).status, 200);
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
       assert.equal((await review(newLicense)).status, 200);
       await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2000-01-01', newLicense.id).run();
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);

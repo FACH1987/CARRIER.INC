@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     try {
       await db.insert(carrierDocuments).values({ id, ...record }).onConflictDoUpdate({ target: [carrierDocuments.userId, carrierDocuments.entityType, carrierDocuments.entityId, carrierDocuments.type], set: record });
     } catch (error) { if (objectKey) await bucket.delete(objectKey); throw error; }
-    // Replacements always require a fresh review. Private keys never leave the server.
+    // A current replacement qualifies immediately; optional prior review is cleared.
     if (old?.objectKey) await bucket.delete(old.objectKey).catch(() => undefined);
     return responseJson({ saved: true, id, status: 'pending' }, 201);
   } catch (error) { return authFailure(error); }

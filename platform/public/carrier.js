@@ -11,7 +11,7 @@ async function api(url, options = {}) {
 function list(checklist, entityType, entityId) {
   return '<ul class="document-list">' + checklist.map(item => {
     const doc = item.document;
-    const state = item.valid ? (doc.exemption ? 'No aplicabilidad aprobada' : 'Revisado y vigente') : !doc ? 'Falta documento' : doc.expiresAt && doc.expiresAt < dossier.day ? 'Vencido · requiere renovación' : doc.status === 'rejected' ? 'Rechazado · requiere corrección' : 'Pendiente de revisión';
+    const state = item.valid ? (doc.exemption ? 'No aplicabilidad declarada' : 'Cargado · Fecha vigente') : !doc ? 'Falta documento' : doc.expiresAt && doc.expiresAt < dossier.day ? 'Vencido · requiere renovación' : doc.status === 'rejected' ? 'Rechazado · requiere corrección' : 'Incompleto · requiere corrección';
     return `<li class="document-item"><div><strong>${safe(item.label)}</strong><small class="document-state ${item.valid ? 'valid' : ''}">${safe(state)}</small>${doc ? `<small>${doc.exemption ? 'Justificación: '+safe(doc.exemption) : 'Emisión: '+safe(doc.issuedAt)+' · Vencimiento: '+safe(doc.noExpiry ? 'Sin fecha impresa' : doc.expiresAt)}</small>${doc.reviewNote ? '<small>Revisión: '+safe(doc.reviewNote)+'</small>' : ''}` : ''}</div><div class="document-actions">${doc && !doc.exemption ? `<a class="workflow-button" href="/api/carrier/documents/${encodeURIComponent(doc.id)}">Descargar privado</a>` : ''}${dossier.readOnly ? doc ? `<button class="workflow-button" data-review="${safe(doc.id)}">Revisar</button>` : '' : `<button class="workflow-button" data-upload="${safe(item.type)}" data-entity="${safe(entityType)}" data-id="${safe(entityId)}">${doc ? 'Reemplazar / renovar' : 'Subir documento'}</button>`}</div></li>`;
   }).join('')+'</ul>';
 }
@@ -26,7 +26,7 @@ async function load() {
     $('#carrier-admin-back').hidden = !dossier.isAdmin;
     $('#dossier-content').hidden = false; $('#dossier-denied').hidden = true;
     const readyCount = dossier.vehicles.filter(v=>v.ready).length;
-    $('#dossier-summary').textContent = dossier.ready ? `Registro operativo habilitado · ${readyCount} unidad(es) con documentación revisada y vigente al ${dossier.day}.` : 'Registro operativo pendiente · Completa los documentos y espera su revisión. No podrás consultar nuevas cargas ni recibir viajes hasta tener una unidad habilitada.';
+    $('#dossier-summary').textContent = dossier.ready ? `Registro operativo habilitado · ${readyCount} unidad(es) con documentación completa y vigente al ${dossier.day}.` : 'Registro operativo pendiente · Sube todos los documentos requeridos y vigentes. El acceso se habilita automáticamente. No podrás consultar nuevas cargas ni recibir viajes hasta tener una unidad habilitada.';
     $('#dossier-summary').classList.toggle('ready',dossier.ready);
     $('#profile-create').hidden = Boolean(dossier.profile) || dossier.readOnly;
     for(const id of ['profile-record','drivers-section','vehicles-section']) $('#'+id).hidden = !dossier.profile;
@@ -34,7 +34,7 @@ async function load() {
       $('#profile-name').textContent = dossier.profile.legalName+' · '+(dossier.profile.kind === 'flota' ? 'Flota' : 'Independiente');
       $('#profile-documents').innerHTML = list(dossier.profileChecklist,'profile',dossier.userId);
       $('#driver-records').innerHTML = dossier.drivers.map(d=>`<article class="dossier-entity"><h3>${safe(d.name)}</h3><p>Categorías declaradas: ${safe(d.categories.join(', '))} · ${d.ready ? 'Documentación vigente' : 'Pendiente / incompleto'}</p>${list(d.checklist,'driver',d.id)}</article>`).join('');
-      $('#vehicle-records').innerHTML = dossier.vehicles.map(v=>`<article class="dossier-entity"><h3>${safe(v.plate)} · ${safe(v.description)}</h3><p>${safe(v.equipment)} · ${safe(v.capacityKg)} kg · Categoría ${safe(v.requiredCategory)} · Conductor: ${safe(v.driverName)}</p><p><strong>${v.ready ? 'Unidad habilitada: documentos revisados y vigentes' : 'Unidad no habilitada: revisa operador, conductor y documentos del vehículo'}</strong></p>${list(v.checklist,'vehicle',v.id)}</article>`).join('');
+      $('#vehicle-records').innerHTML = dossier.vehicles.map(v=>`<article class="dossier-entity"><h3>${safe(v.plate)} · ${safe(v.description)}</h3><p>${safe(v.equipment)} · ${safe(v.capacityKg)} kg · Categoría ${safe(v.requiredCategory)} · Conductor: ${safe(v.driverName)}</p><p><strong>${v.ready ? 'Unidad habilitada: documentos completos y vigentes' : 'Unidad no habilitada: revisa operador, conductor y documentos del vehículo'}</strong></p>${list(v.checklist,'vehicle',v.id)}</article>`).join('');
       $('#vehicle-driver').innerHTML = '<option value="">Selecciona un conductor</option>'+dossier.drivers.map(d=>`<option value="${safe(d.id)}">${safe(d.name)} · ${safe(d.categories.join(', '))}</option>`).join('');
       const limit = dossier.profile.kind === 'independiente' ? 1 : 50;
       $('#driver-add').hidden = dossier.readOnly || dossier.drivers.length >= limit;

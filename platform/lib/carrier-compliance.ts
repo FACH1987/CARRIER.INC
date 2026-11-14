@@ -15,13 +15,13 @@ export const documentLabels: Record<string, string> = {
   operation: 'Autorización / documento de operación aplicable', circulation: 'Circulación del vehículo', vehicle_insurance: 'Carné / póliza de seguro del vehículo',
   inspection: 'Inspección técnico-mecánica', emissions: 'Control de emisiones', road_tax: 'Rodamiento', weights: 'Certificado de pesos y dimensiones', special_permit: 'Permiso de carga especializada'
 };
-// Only the administrator can accept a reasoned non-applicability request.
+// Applicable-document declarations are submitted by the operator; review is optional.
 export const exemptable = ['ruc', 'company_registration', 'operation', 'weights', 'special_permit'];
 export const timeless = ['identity', 'circulation', 'ruc', 'company_registration'];
 export function todayNI() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Managua', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
 export function validDate(value: string) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value + 'T12:00:00Z')) && new Date(value + 'T12:00:00Z').toISOString().slice(0, 10) === value; }
 export function documentIsValid(doc: typeof carrierDocuments.$inferSelect | undefined, day: string) {
-  return Boolean(doc && doc.status === 'approved' && (doc.exemption || (doc.issuedAt && doc.issuedAt <= day && (doc.noExpiry || (doc.expiresAt && doc.expiresAt >= day)))));
+  return Boolean(doc && doc.status !== 'rejected' && (doc.exemption || (doc.objectKey && doc.size && doc.issuedAt && doc.issuedAt <= day && (doc.noExpiry || (doc.expiresAt && doc.expiresAt >= day)))));
 }
 export async function carrierDossier(userId: string, day = todayNI()) {
   const db = getDb();
@@ -51,6 +51,6 @@ export async function carrierDossier(userId: string, day = todayNI()) {
 export async function requireCarrierReady(userId: string, vehicleId?: string, day = todayNI()) {
   const dossier = await carrierDossier(userId, day < todayNI() ? todayNI() : day);
   const vehicle = vehicleId ? dossier.vehicles.find(row => row.id === vehicleId && row.ready) : dossier.vehicles.find(row => row.ready);
-  if (!vehicle) throw new AuthError('Completa tu expediente: necesitas documentos aprobados y vigentes del operador, conductor y vehículo.', 403);
+  if (!vehicle) throw new AuthError('Completa tu expediente: sube los documentos requeridos y vigentes del operador, conductor y vehículo.', 403);
   return vehicle;
 }

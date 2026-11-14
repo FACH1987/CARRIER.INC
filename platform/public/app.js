@@ -341,7 +341,7 @@ document.querySelector('#assign-lookup').addEventListener('click', async event =
     const result = await workflowRequest(assigningId, { action: 'options', carrierEmail: requestedEmail });
     if (requestedEmail !== email.value.trim()) return;
     assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Selecciona una unidad</option>' + result.vehicles.map(v => `<option value="${escapeHtml(v.id)}">${escapeHtml(v.plate)} · ${escapeHtml(v.driverName)} · Categoría ${escapeHtml(v.category)}</option>`).join('');
-    document.querySelector('#assign-verified').textContent = result.vehicles.length ? 'Documentación revisada y vigente hasta la recogida: ' + result.checkedThrough + '. No sustituye la autorización oficial.' : 'No tiene unidades habilitadas para esta fecha, equipo y capacidad. El transportista debe completar o renovar su expediente.';
+    document.querySelector('#assign-verified').textContent = result.vehicles.length ? 'Documentación completa y con fechas vigentes hasta la recogida: ' + result.checkedThrough + '. Fechas y categorías declaradas por el transportista.' : 'No tiene unidades habilitadas para esta fecha, equipo y capacidad. El transportista debe completar o renovar su expediente.';
   } catch (error) { document.querySelector('#assign-error').textContent = error.message; document.querySelector('#assign-error').hidden = false; }
   finally { workflowBusy.delete(assigningId); button.disabled = false; }
 });
