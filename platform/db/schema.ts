@@ -2,7 +2,12 @@ import { sqliteTable, text, real, integer, index, uniqueIndex } from 'drizzle-or
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(), email: text('email').notNull().unique(),
   role: text('role', { enum: ['empresa', 'transportista'] }).notNull().default('empresa'),
-  name: text('name').notNull(), passwordHash: text('password_hash').notNull(), createdAt: text('created_at').notNull()
+  name: text('name').notNull(), passwordHash: text('password_hash').notNull(), createdAt: text('created_at').notNull(),
+  phone: text('phone'), phoneVerifiedAt: text('phone_verified_at'),
+  phoneChannel: text('phone_channel', { enum: ['none', 'whatsapp', 'sms'] }).notNull().default('none'),
+  notifyLoads: integer('notify_loads', { mode: 'boolean' }).notNull().default(false),
+  notifyDocuments: integer('notify_documents', { mode: 'boolean' }).notNull().default(false),
+  phoneConsentAt: text('phone_consent_at')
 });
 export const sessions = sqliteTable('sessions', {
   tokenHash: text('token_hash').primaryKey(),
@@ -35,7 +40,9 @@ export const carrierDocuments = sqliteTable('carrier_documents', {
   issuedAt: text('issued_at'), expiresAt: text('expires_at'), noExpiry: integer('no_expiry', { mode: 'boolean' }).notNull().default(false),
   exemption: text('exemption'), status: text('status', { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
   revision: text('revision').notNull(), uploadedAt: text('uploaded_at').notNull(),
-  reviewedAt: text('reviewed_at'), reviewedBy: text('reviewed_by'), reviewNote: text('review_note')
+  reviewedAt: text('reviewed_at'), reviewedBy: text('reviewed_by'), reviewNote: text('review_note'),
+  ocrStatus: text('ocr_status').notNull().default('not_started'), ocrRevision: text('ocr_revision'),
+  ocrOperationId: text('ocr_operation_id'), ocrSummary: text('ocr_summary'), ocrUpdatedAt: text('ocr_updated_at')
 }, t => [index('carrier_documents_user_idx').on(t.userId), uniqueIndex('carrier_documents_slot_idx').on(t.userId, t.entityType, t.entityId, t.type)]);
 export const carrierNoticeReads = sqliteTable('carrier_notice_reads', {
   id: text('id').primaryKey(),
@@ -43,6 +50,16 @@ export const carrierNoticeReads = sqliteTable('carrier_notice_reads', {
   documentId: text('document_id').notNull().references(() => carrierDocuments.id, { onDelete: 'cascade' }),
   readAt: text('read_at').notNull()
 }, t => [index('carrier_notice_reads_user_idx').on(t.userId)]);
+export const phoneDeliveries = sqliteTable('phone_deliveries', {
+  id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: text('event_type').notNull(), eventId: text('event_id').notNull(), channel: text('channel').notNull(),
+  phone: text('phone').notNull(), state: text('state').notNull().default('pending'),
+  providerId: text('provider_id'), createdAt: text('created_at').notNull(), updatedAt: text('updated_at').notNull()
+}, t => [index('phone_deliveries_state_idx').on(t.state)]);
+export const loadNoticeReads = sqliteTable('load_notice_reads', {
+  id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  loadId: text('load_id').notNull().references(() => loads.id, { onDelete: 'cascade' }), readAt: text('read_at').notNull()
+}, t => [index('load_notice_reads_user_idx').on(t.userId)]);
 export const loads = sqliteTable('loads', {
   id: text('id').primaryKey(),
   ownerId: text('owner_id').notNull(),

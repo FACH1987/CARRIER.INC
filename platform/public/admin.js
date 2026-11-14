@@ -95,3 +95,9 @@ tbody.addEventListener('click', async event => {
 });
 window.addEventListener('focus', loadUsers);
 loadUsers();
+
+async function loadIntegrationStatus(){
+ const target=document.querySelector('#integration-status');
+ try{const response=await fetch('/api/admin/integrations',{cache:'no-store'});if(!response.ok){target.textContent='Los servicios externos solo se muestran al administrador.';return;}const data=await response.json();target.textContent='SMS: '+(data.status.sms&&data.status.phoneVerification?'conectado; requiere programación':'pendiente de conectar Twilio y confirmar el remitente')+'. Lectura de PDF y fotos: '+(data.status.ocr?'Azure conectado':'pendiente de conectar Azure Document Intelligence')+'. La autenticidad ante los emisores y el cumplimiento legal completo no están certificados. La programación automática de envíos está pendiente de configurar.';}catch{target.textContent='No pudimos consultar el estado de los servicios externos.';}
+}
+loadIntegrationStatus();

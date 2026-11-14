@@ -75,7 +75,17 @@ function setAuthMode(mode) {
   document.querySelector('#auth-login-mode').setAttribute('aria-pressed', String(!registering));
   document.querySelector('#auth-register-mode').setAttribute('aria-pressed', String(registering));
   document.querySelector('#auth-error').hidden = true;
+  updatePhoneField();
 }
+function updatePhoneField() {
+  const needed = authMode === 'register' && authForm.elements.namedItem('role').value === 'transportista';
+  document.querySelector('#auth-phone-field').hidden = !needed;
+  document.querySelector('#auth-sms-field').hidden = !needed;
+  authForm.elements.namedItem('phone').disabled = !needed;
+  authForm.elements.namedItem('phone').required = needed;
+  authForm.elements.namedItem('smsConsent').disabled = !needed;
+}
+authForm.elements.namedItem('role').addEventListener('change', updatePhoneField);
 function openAuth(mode = 'login', publishing = false) {
   continueToPublish = publishing;
   setAuthMode(mode);
@@ -476,7 +486,7 @@ document.querySelector("#empty-clear").addEventListener("click", clearFilters);
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
 
 
-document.querySelector('#register-carrier').addEventListener('click', () => { openAuth('register'); authForm.elements.namedItem('role').value = 'transportista'; });
+document.querySelector('#register-carrier').addEventListener('click', () => { openAuth('register'); authForm.elements.namedItem('role').value = 'transportista'; updatePhoneField(); });
 document.querySelector('#gate-login').addEventListener('click', () => openAuth());
 document.querySelector('#account-login').addEventListener('click', () => openAuth());
 document.querySelector('#sign-in').addEventListener('click', () => openAuth('login', true));
@@ -495,6 +505,7 @@ authForm.addEventListener('submit', async (event) => {
   const data = new FormData(authForm);
   const payload = { email: String(data.get('email')).trim(), password: String(data.get('password')) };
   if (authMode === 'register') { payload.name = String(data.get('name')).trim(); payload.role = String(data.get('role')); }
+  if (authMode === 'register' && payload.role === 'transportista') { payload.phone = String(data.get('phone')).trim(); payload.smsConsent = data.has('smsConsent'); }
   authBusy = true;
   const button = document.querySelector('#auth-submit');
   button.disabled = true;

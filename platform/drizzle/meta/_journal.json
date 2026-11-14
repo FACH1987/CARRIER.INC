@@ -43,6 +43,13 @@
       "when": 1794689191946,
       "tag": "0005_wealthy_martin_li",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794690729798,
+      "tag": "0006_pretty_bishop",
+      "breakpoints": true
     }
   ]
 }

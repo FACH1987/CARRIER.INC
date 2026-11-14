@@ -5,6 +5,7 @@ import { users, carrierProfiles, carrierDrivers, carrierVehicles } from '../../.
 import { currentAccount, readAuthJson, responseJson, authFailure, AuthError } from '../../../lib/account-auth';
 import { carrierDossier, categories } from '../../../lib/carrier-compliance';
 import { vehicleCategoryError } from '../../../lib/document-rules';
+import { integrationStatus } from '../../../lib/mobile-providers';
 export const dynamic = 'force-dynamic';
 const name = z.string().trim().min(2).max(120);
 const schema = z.discriminatedUnion('action', [
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     if (target !== account.id && !account.isAdmin) throw new AuthError('Acceso privado.', 403);
     const [owner] = await getDb().select({ role: users.role, name: users.name, email: users.email }).from(users).where(eq(users.id, target));
     if (!owner || owner.role !== 'transportista') throw new AuthError('Expediente no encontrado.', 404);
-    return responseJson({ ...await carrierDossier(target), owner, userId: target, isAdmin: account.isAdmin });
+    return responseJson({ ...await carrierDossier(target), owner, userId: target, isAdmin: account.isAdmin, integrations: integrationStatus() });
   } catch (error) { return authFailure(error); }
 }
 export async function POST(request: Request) {

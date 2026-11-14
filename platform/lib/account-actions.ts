@@ -4,17 +4,20 @@ import { getDb } from '../db';
 import { users } from '../db/schema';
 import { hashPassword, verifyPassword } from './passwords';
 import { withAdminAccess } from './admin-policy';
+import { normalizePhone } from './phone';
 import { AuthError, authFailure, checkAuthLimit, readAuthJson, responseJson, startSession } from './account-auth';
 
 const emailSchema = z.string().trim().email().max(120).transform(value => value.toLowerCase());
 const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128) });
-const registerSchema = z.object({ email: emailSchema, password: z.string().min(12).max(128), name: z.string().trim().min(2).max(80), role: z.enum(['empresa', 'transportista']).default('empresa') });
+const registerSchema = z.object({ email: emailSchema, password: z.string().min(12).max(128), name: z.string().trim().min(2).max(80), role: z.enum(['empresa', 'transportista']).default('empresa'), phone: z.string().max(30).optional(), smsConsent: z.boolean().default(false) }).superRefine((data, ctx) => {
+  if (data.role === 'transportista' && !normalizePhone(data.phone || '')) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa un teléfono válido de Nicaragua.', path: ['phone'] });
+});
 
 export async function register(request: Request) {
   try {
     const body = await readAuthJson(request);
     const parsed = registerSchema.safeParse(body);
-    if (!parsed.success) throw new AuthError('Completa tu nombre, un correo válido y una contraseña de 12 a 128 caracteres.');
+    if (!parsed.success) throw new AuthError('Completa tu nombre, correo y contraseña de 12 a 128 caracteres. Los transportistas deben registrar un teléfono válido de Nicaragua.');
     const data = parsed.data;
     await checkAuthLimit('register-ip', request.headers.get('cf-connecting-ip') || 'unknown', 6, 3600);
     await checkAuthLimit('register-email', data.email, 6, 3600);
@@ -22,7 +25,8 @@ export async function register(request: Request) {
     const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, data.email)).limit(1);
     if (existing) throw new AuthError('No se pudo crear la cuenta con ese correo. Si ya tienes una cuenta, inicia sesión.', 409);
     const account = { id: crypto.randomUUID(), name: data.name, email: data.email, role: data.role };
-    await db.insert(users).values({ ...account, passwordHash: await hashPassword(data.password), createdAt: new Date().toISOString() });
+    const sms = data.role === 'transportista' && data.smsConsent;
+    await db.insert(users).values({ ...account, phone: data.role === 'transportista' ? normalizePhone(data.phone!) : null, phoneChannel: sms ? 'sms' : 'none', notifyLoads: sms, notifyDocuments: sms, phoneConsentAt: sms ? new Date().toISOString() : null, passwordHash: await hashPassword(data.password), createdAt: new Date().toISOString() });
     return responseJson({ user: withAdminAccess(account), onboardingRequired: data.role === 'transportista' }, 201, await startSession(request, account.id));
   } catch (error) { return authFailure(error); }
 }

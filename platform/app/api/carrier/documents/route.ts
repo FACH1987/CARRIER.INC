@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const bucket = documentBucket();
     const objectKey = exemption ? null : `${account.id}/${revision}`;
     if (objectKey) await bucket.put(objectKey, bytes, { httpMetadata: { contentType: mime! } });
-    const record = { userId: account.id, entityType, entityId, type, objectKey, mime: exemption ? null : mime!, size: exemption ? 0 : bytes.length, issuedAt: exemption ? null : issuedAt, expiresAt: exemption || noExpiry ? null : expiresAt, noExpiry: !exemption && noExpiry, exemption, status: 'pending' as const, revision, uploadedAt: new Date().toISOString(), reviewedAt: null, reviewedBy: null, reviewNote: null };
+    const record = { userId: account.id, entityType, entityId, type, objectKey, mime: exemption ? null : mime!, size: exemption ? 0 : bytes.length, issuedAt: exemption ? null : issuedAt, expiresAt: exemption || noExpiry ? null : expiresAt, noExpiry: !exemption && noExpiry, exemption, status: 'pending' as const, revision, uploadedAt: new Date().toISOString(), reviewedAt: null, reviewedBy: null, reviewNote: null, ocrStatus: 'not_started', ocrRevision: null, ocrOperationId: null, ocrSummary: null, ocrUpdatedAt: null };
     try {
       await db.insert(carrierDocuments).values({ id, ...record }).onConflictDoUpdate({ target: [carrierDocuments.userId, carrierDocuments.entityType, carrierDocuments.entityId, carrierDocuments.type], set: record });
     } catch (error) { if (objectKey) await bucket.delete(objectKey); throw error; }

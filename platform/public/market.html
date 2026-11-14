@@ -11,8 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=documents-1">
-    <script src="app.js?v=alerts-1" defer></script>
-  <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=1" defer></script></head>
+    <script src="app.js?v=mobile-1" defer></script>
+  <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
   <body>
     <header class="topbar">
       <a class="brand" href="#" aria-label="RutaCarga. Diseñado por: Gueguense Digital. Inicio">
@@ -183,7 +183,7 @@
         <div class="account-modes" aria-label="Tipo de acceso"><button type="button" id="auth-login-mode" aria-pressed="true">Iniciar sesión</button><button type="button" id="auth-register-mode" aria-pressed="false">Crear cuenta</button></div>
         <div class="account-fields"><label class="form-field" id="auth-role-field" hidden><span>Tipo de cuenta</span><select name="role" disabled><option value="empresa">Empresa</option><option value="transportista">Transportista</option></select></label>
           <label class="form-field" id="auth-name-field" hidden><span>Tu nombre o empresa</span><input name="name" autocomplete="name" minlength="2" maxlength="80" disabled></label>
-          <label class="form-field"><span>Correo electrónico</span><input name="email" type="email" autocomplete="username" maxlength="120" required></label>
+          <label class="form-field" id="auth-phone-field" hidden><span>Teléfono del transportista (+505)</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" placeholder="+505 8888 8888" disabled></label><label class="form-note" id="auth-sms-field" hidden><input name="smsConsent" type="checkbox" disabled> Quiero recibir SMS de cargas nuevas y vencimientos. Confirmaré mi número con un código y podré desactivar los avisos desde Mi expediente. Los envíos requieren que el servicio SMS esté conectado.</label><label class="form-field"><span>Correo electrónico</span><input name="email" type="email" autocomplete="username" maxlength="120" required></label>
           <label class="form-field"><span>Contraseña</span><input name="password" type="password" autocomplete="current-password" minlength="1" maxlength="128" required aria-describedby="auth-password-help"></label>
           <p id="auth-password-help" class="account-help">Usa la contraseña de tu cuenta de RutaCarga.</p>
           <label class="form-field" id="auth-confirm-field" hidden><span>Repite la contraseña</span><input name="confirmPassword" type="password" autocomplete="new-password" maxlength="128" disabled></label>
