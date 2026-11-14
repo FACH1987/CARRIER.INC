@@ -17,6 +17,7 @@ let loads = [];
 let signedIn = false;
 let mineOnly = false;
 const deletingLoads = new Set();
+const workflowBusy = new Set();
 const removedLoadIds = new Set();
 let sessionKnown = false;
 let refreshing = null;
@@ -30,6 +31,7 @@ function setAccount(user) {
   currentUser = user;
   signedIn = Boolean(user);
   document.querySelector('#admin-open').hidden = !user?.isAdmin;
+  document.querySelector('#commissions-open').hidden = !user?.isAdmin;
   document.querySelector('#access-gate').hidden = signedIn;
   document.querySelector('#load-board').hidden = !signedIn;
   document.querySelector('#board-meta').hidden = !signedIn;
@@ -117,7 +119,7 @@ function escapeHtml(value) {
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO", maximumFractionDigits: 2 }).format(value);
 }
 
 function formatWeight(value) {
@@ -157,17 +159,18 @@ function getVisibleLoads() {
 function renderLoads() {
   const visibleLoads = getVisibleLoads();
   const hasFilters = Boolean(filters.origin.value.trim() || filters.destination.value.trim() || filters.equipment.value);
-  document.querySelector('#empty-title').textContent = hasFilters ? 'No encontramos cargas con esos filtros' : (mineOnly ? 'No tienes cargas publicadas' : 'Aún no hay cargas publicadas');
+  document.querySelector('#empty-title').textContent = hasFilters ? 'No encontramos cargas con esos filtros' : (mineOnly ? 'No tienes cargas ni viajes asignados' : 'Aún no hay cargas publicadas');
   document.querySelector('#empty-description').textContent = hasFilters ? 'Prueba con otro municipio o equipo, o publica tu propio envío.' : 'Publica la primera carga con los datos de tu envío para que los transportistas puedan contactarte.';
   document.querySelector('#empty-clear').hidden = !hasFilters;
   countElement.textContent = String(visibleLoads.length);
-  document.querySelector('#load-count-label').textContent = mineOnly ? 'cargas de tu cuenta' : 'cargas disponibles';
+  document.querySelector('#load-count-label').textContent = mineOnly ? 'cargas y viajes de tu cuenta' : 'cargas disponibles';
   emptyState.hidden = visibleLoads.length > 0;
   loadList.hidden = visibleLoads.length === 0;
   loadList.innerHTML = visibleLoads.map((load) => {
-    const contactControl = `<a class="button contact-button" href="mailto:${escapeHtml(load.email)}?subject=${encodeURIComponent(`Consulta sobre carga: ${load.origin} a ${load.destination}`)}" aria-label="Contactar a ${escapeHtml(load.company)} por correo">Contactar <span aria-hidden="true">↗</span></a>`;
+    const contactEmail = load.isOwner && load.carrierEmail ? load.carrierEmail : load.email;
+    const contactControl = `<a class="button contact-button" href="mailto:${escapeHtml(contactEmail)}?subject=${encodeURIComponent(`Consulta sobre carga: ${load.origin} a ${load.destination}`)}" aria-label="Contactar a ${escapeHtml(load.company)} por correo">Contactar <span aria-hidden="true">↗</span></a>`;
     const removeControl = load.canDelete === true && signedIn
-      ? `<button type="button" class="delete-load-button" data-delete-load="${escapeHtml(load.id)}" ${deletingLoads.has(load.id) ? 'disabled' : ''}>${deletingLoads.has(load.id) ? 'Eliminando…' : 'Eliminar'}<span class="sr-only"> carga de ${escapeHtml(load.origin)} a ${escapeHtml(load.destination)}</span></button>` : '';
+      ? `<button type="button" class="delete-load-button" data-delete-load="${escapeHtml(load.id)}" ${deletingLoads.has(load.id) || workflowBusy.has(load.id) ? 'disabled' : ''}>${deletingLoads.has(load.id) ? 'Eliminando…' : 'Eliminar'}<span class="sr-only"> carga de ${escapeHtml(load.origin)} a ${escapeHtml(load.destination)}</span></button>` : '';
     return `
       <article class="load-card">
         <div class="route-info">
@@ -178,7 +181,7 @@ function renderLoads() {
         <div class="load-detail"><span class="detail-label">EQUIPO</span><span class="equipment-pill">${escapeHtml(load.equipment)}</span></div>
         <div class="load-detail"><span class="detail-label">PESO</span><span class="detail-value">${escapeHtml(formatWeight(load.weight))}</span></div>
         <div class="load-detail pay-detail"><span class="detail-label">PAGO OFRECIDO</span><span class="detail-value pay-value">${escapeHtml(formatCurrency(load.pay))}</span></div>
-        <div class="load-actions">${contactControl}${removeControl}</div>
+        <div class="load-actions">${contactControl}${workflowControls(load)}${removeControl}</div><div class="load-extra">${workflowSummary(load)}</div>
       </article>`;
   }).join("");
 }
@@ -223,6 +226,110 @@ loadList.addEventListener('click', async (event) => {
   finally { deletingLoads.delete(id); renderLoads(); }
 });
 
+const assignDialog = document.querySelector('#assign-dialog');
+const assignForm = document.querySelector('#assign-form');
+let assigningId = null;
+const statusNames = { disponible: 'Disponible', asignada: 'Esperando aceptación', en_transito: 'En tránsito', entregada: 'Entrega reportada', finalizada: 'Finalizada' };
+function quoteText(quote) {
+  return 'Flete al transportista: ' + formatCurrency(quote.fareCents / 100) + ' · Comisión RutaCarga 10%: ' + formatCurrency(quote.commissionCents / 100) + ' · Total empresa: ' + formatCurrency(quote.totalCents / 100);
+}
+function updatePostQuote() {
+  const pay = Number(postForm.elements.namedItem('pay').value);
+  if (!Number.isFinite(pay) || pay < 1 || pay > 1000000) { document.querySelector('#post-quote').textContent = 'Ingresa el valor del flete para ver la comisión.'; return; }
+  const fareCents = Math.round(pay * 100);
+  const commissionCents = Math.round(fareCents * 0.1);
+  document.querySelector('#post-quote').textContent = quoteText({ fareCents, commissionCents, totalCents: fareCents + commissionCents });
+}
+postForm.elements.namedItem('pay').addEventListener('input', updatePostQuote);
+function workflowControls(load) {
+  const button = (action, title) => `<button class="workflow-button" type="button" data-workflow="${action}" data-load="${escapeHtml(load.id)}" ${workflowBusy.has(load.id) ? 'disabled' : ''}>${title}</button>`;
+  let html = '';
+  if (load.canAssign) html += button('assign', 'Asignar transportista');
+  if (load.isOwner && load.status === 'asignada') html += button('cancel_assignment', 'Retirar asignación');
+  if (load.isCarrier && load.status === 'asignada') html += button('accept', 'Aceptar viaje') + button('reject', 'Rechazar');
+  if (load.isCarrier && load.status === 'en_transito') html += button('deliver', 'Reportar entrega');
+  if (load.isOwner && load.status === 'entregada') html += button('complete', 'Confirmar finalización');
+  return html;
+}
+function workflowSummary(load) {
+  const status = escapeHtml(statusNames[load.status] || 'Disponible');
+  const carrier = load.carrierName ? '<span>Transportista: ' + escapeHtml(load.carrierName) + '</span>' : '';
+  const pricing = load.quote ? '<span>' + escapeHtml(quoteText(load.quote)) + (load.commissionAccepted ? '' : ' · Requiere aceptación al asignar') + '</span>' : '';
+  const invoice = load.commission ? '<strong>' + (load.commission.status === 'paid' ? 'Comisión registrada como pagada' : 'Comisión pendiente de pago por la empresa') + ': ' + escapeHtml(formatCurrency(load.commission.amountCents / 100)) + '</strong>' : '';
+  return '<span class="shipment-status">' + status + '</span>' + carrier + pricing + invoice;
+}
+async function workflowRequest(id, payload) {
+  const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const result = await response.json();
+  if (response.status === 401) {
+    setAccount(null);
+    if (assignDialog.open) assignDialog.close();
+    openAuth();
+  }
+  if (!response.ok) throw new Error(result.error || 'No pudimos actualizar la carga.');
+  return result;
+}
+function showMyLoads() {
+  mineOnly = true;
+  document.querySelector('#my-loads').setAttribute('aria-pressed', 'true');
+}
+loadList.addEventListener('click', async event => {
+  const button = event.target.closest('[data-workflow]');
+  if (!button || !loadList.contains(button)) return;
+  const load = loads.find(item => item.id === button.dataset.load);
+  if (!load || workflowBusy.has(load.id)) return;
+  const action = button.dataset.workflow;
+  if (action === 'assign') {
+    if (!load.canAssign) return;
+    assigningId = load.id;
+    assignForm.reset();
+    document.querySelector('#assign-route').textContent = load.origin + ' → ' + load.destination;
+    document.querySelector('#assign-quote').textContent = quoteText(load.quote);
+    document.querySelector('#assign-error').hidden = true;
+    assignDialog.showModal();
+    return;
+  }
+  const messages = {
+    accept: '¿Aceptar este viaje por el flete indicado? La comisión de RutaCarga la paga la empresa, adicional al flete.',
+    reject: '¿Rechazar esta asignación? La carga volverá a estar disponible y no se generará comisión.',
+    cancel_assignment: '¿Retirar la asignación antes de que el transportista la acepte? No se generará comisión.',
+    deliver: '¿Confirmas que realizaste la entrega? La empresa deberá confirmar la finalización.',
+    complete: '¿Confirmas que el transporte finalizó? Se generará una comisión pendiente de pago de ' + formatCurrency((load.quote?.commissionCents || 0) / 100) + ' a cargo de tu empresa. No se realiza un cargo automático.'
+  };
+  if (!messages[action] || !window.confirm(messages[action])) return;
+  workflowBusy.add(load.id);
+  renderLoads();
+  try {
+    await workflowRequest(load.id, { action });
+    showMyLoads();
+    await refreshLoads();
+    showToast(action === 'complete' ? 'Carga finalizada. Comisión pendiente de pago registrada.' : 'Estado de la carga actualizado.');
+  } catch (error) { showToast(error.message || 'Revisa tu conexión.'); }
+  finally { workflowBusy.delete(load.id); renderLoads(); }
+});
+document.querySelector('#assign-close').addEventListener('click', () => { if (!workflowBusy.has(assigningId)) assignDialog.close(); });
+assignDialog.addEventListener('cancel', event => { if (workflowBusy.has(assigningId)) event.preventDefault(); });
+assignForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!assignForm.reportValidity() || !assigningId || workflowBusy.has(assigningId)) return;
+  const id = assigningId;
+  const button = assignForm.querySelector('[type="submit"]');
+  button.disabled = true;
+  workflowBusy.add(id);
+  document.querySelector('#assign-error').hidden = true;
+  try {
+    await workflowRequest(id, { action: 'assign', carrierEmail: assignForm.elements.namedItem('carrierEmail').value.trim(), acceptCommission: assignForm.elements.namedItem('acceptCommission').checked });
+    assignDialog.close();
+    showMyLoads();
+    await refreshLoads();
+    showToast('Carga asignada. El transportista debe aceptar el viaje en Mis cargas.');
+  } catch (error) {
+    const target = document.querySelector('#assign-error');
+    target.textContent = error.message || 'Revisa los datos.';
+    target.hidden = false;
+  } finally { workflowBusy.delete(id); button.disabled = false; renderLoads(); }
+});
+
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add("visible");
@@ -244,6 +351,7 @@ async function openPostDialog() {
   const localToday = ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
   dateInput.min = localToday;
   if (!dateInput.value || dateInput.value < localToday) dateInput.value = localToday;
+  updatePostQuote();
   if (!postDialog.open) postDialog.showModal();
 }
 
@@ -269,7 +377,8 @@ postForm.addEventListener("submit", async (event) => {
     weight: Number(formData.get("weight")),
     pay: Number(formData.get("pay")),
     company: String(formData.get("company")).trim(),
-    email: String(formData.get("email")).trim()
+    email: String(formData.get("email")).trim(),
+    acceptCommission: postForm.elements.namedItem("acceptCommission").checked
   };
 
   const button = postForm.querySelector('[type="submit"]');

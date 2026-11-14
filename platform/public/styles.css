@@ -378,3 +378,9 @@ h1, h2, h3, p { margin-top: 0; }
 
 .access-gate p { max-width: 580px; margin-left: auto; margin-right: auto; line-height: 1.8; font-size: 14px; }
 .access-gate .button { margin: 6px; }
+
+.load-extra { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 9px 16px; border-top: 1px solid #e1e8f4; padding-top: 13px; color: #526380; font-size: 11px; line-height: 1.7; }
+.shipment-status { color: #1d4ed8; font-weight: 700; }
+.workflow-button { border: 1px solid #bfdbfe; border-radius: 6px; padding: 7px 9px; background: #eff6ff; color: #1d4ed8; font: inherit; font-size: 11px; cursor: pointer; }
+.workflow-button:disabled { opacity: .6; cursor: wait; }
+.freight-quote { padding: 14px; margin: 16px 0; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; background: #eff6ff; line-height: 1.8; font-size: 12px; }

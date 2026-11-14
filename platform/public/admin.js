@@ -48,7 +48,7 @@ async function loadUsers() {
     document.querySelector('#users-total').textContent = String(data.counts.total);
     document.querySelector('#users-companies').textContent = String(data.counts.empresas);
     document.querySelector('#users-carriers').textContent = String(data.counts.transportistas);
-    tbody.innerHTML = data.users.map(user => `<tr><td>${escapeHtml(user.name)}</td><td>${escapeHtml(user.email)}</td><td>${user.role === 'transportista' ? 'Transportista' : 'Empresa'}</td><td>${escapeHtml(registrationDate(user.createdAt))}</td><td>${user.isAdmin ? '<span class="admin-protected">Administrador · Cuenta protegida</span>' : user.canDelete === true ? `<button type="button" class="admin-delete-user" data-delete-user="${escapeHtml(user.id)}">Eliminar<span class="sr-only"> usuario ${escapeHtml(user.name)}</span></button>` : ''}</td></tr>`).join('');
+    tbody.innerHTML = data.users.map(user => `<tr><td>${escapeHtml(user.name)}</td><td>${escapeHtml(user.email)}</td><td>${user.role === 'transportista' ? 'Transportista' : 'Empresa'}</td><td>${escapeHtml(registrationDate(user.createdAt))}</td><td>${user.isAdmin ? '<span class="admin-protected">Administrador · Cuenta protegida</span>' : user.canDelete === true ? `<button type="button" class="admin-delete-user" data-delete-user="${escapeHtml(user.id)}">Eliminar<span class="sr-only"> usuario ${escapeHtml(user.name)}</span></button>` : '<span class="admin-protected">Historial protegido</span>'}</td></tr>`).join('');
     document.querySelector('#users-empty').hidden = data.users.length > 0;
     document.querySelector('#users-page').textContent = `Página ${page} de ${Math.max(1, Math.ceil(total / pageSize))} · ${total} cuentas encontradas`;
     statusElement.textContent = 'Usuarios actualizados.';

@@ -3,6 +3,7 @@ import { getDb } from '../../../../db';
 import { users } from '../../../../db/schema';
 import { authFailure, currentAccount, responseJson } from '../../../../lib/account-auth';
 import { withAdminAccess } from '../../../../lib/admin-policy';
+import { protectedFinancialHistory } from '../../../../lib/billing';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
@@ -23,13 +24,13 @@ export async function GET(request: Request) {
     const db = getDb();
     const pageSize = 25;
     const [rows, [matched], groups] = await Promise.all([
-      db.select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt }).from(users)
+      db.select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt, protectedHistory: protectedFinancialHistory(users.id) }).from(users)
         .where(filter).orderBy(desc(users.createdAt), desc(users.id)).limit(pageSize).offset((page - 1) * pageSize),
       db.select({ total: count() }).from(users).where(filter),
       db.select({ role: users.role, total: count() }).from(users).groupBy(users.role)
     ]);
     const companies = groups.find(group => group.role === 'empresa')?.total || 0;
     const carriers = groups.find(group => group.role === 'transportista')?.total || 0;
-    return responseJson({ users: rows.map(row => ({ ...row, isAdmin: withAdminAccess(row).isAdmin, canDelete: !withAdminAccess(row).isAdmin })), administrator: { email: account.email }, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, total: companies + carriers } });
+    return responseJson({ users: rows.map(({ protectedHistory, ...row }) => ({ ...row, isAdmin: withAdminAccess(row).isAdmin, canDelete: !withAdminAccess(row).isAdmin && !protectedHistory })), administrator: { email: account.email }, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, total: companies + carriers } });
   } catch (error) { return authFailure(error); }
 }

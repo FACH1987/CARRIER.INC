@@ -26,3 +26,6 @@
 .admin-delete-user:disabled { opacity: .6; cursor: wait; }
 .admin-delete-user:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
 .admin-protected { color: #1d4ed8; font-size: 12px; font-weight: 600; }
+
+.billing-detail { display: block; margin-top: 6px; color: #526380; line-height: 1.6; font-size: 11px; white-space: normal; }
+.billing-notice { color: #1e40af; border-left: 3px solid #2563eb; padding: 10px 14px; background: #eff6ff; font-size: 12px; line-height: 1.7; }
