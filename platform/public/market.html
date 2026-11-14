@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
-    <link rel="stylesheet" href="styles.css?v=billing-1">
-    <script src="app.js?v=billing-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=documents-1">
+    <script src="app.js?v=documents-1" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -23,7 +23,7 @@
         <a class="nav-link active" href="#cargas">Buscar cargas</a>
         <a class="nav-link" href="#como-funciona">Cómo funciona</a>
       </nav>
-      <div class="top-actions"><a id="commissions-open" class="button button-light button-small" href="commissions.html" hidden>Comisiones</a><a id="admin-open" class="button button-light button-small" href="admin.html" hidden>Usuarios</a><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
+      <div class="top-actions"><a id="carrier-open" class="button button-light button-small" href="carrier.html" hidden>Mi expediente</a><a id="commissions-open" class="button button-light button-small" href="commissions.html" hidden>Comisiones</a><a id="admin-open" class="button button-light button-small" href="admin.html" hidden>Usuarios</a><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
         <button class="button button-outline button-small" id="open-post-top" type="button">Publicar carga <span aria-hidden="true">↗</span></button>
       </div>
     </header>
@@ -92,7 +92,7 @@
           <div class="board-meta" id="board-meta" hidden><span class="live-dot"></span><strong id="load-count">0</strong> <span id="load-count-label">cargas disponibles</span></div>
         </div>
 
-        <div id="access-gate" class="empty-state access-gate"><h3>Regístrate para ver las cargas</h3><p>¿Eres transportista? Crea tu cuenta para consultar rutas, pagos y contactos. Si ya tienes una cuenta, inicia sesión.</p><button class="button button-dark" id="register-carrier" type="button">Registrarme como transportista</button><button class="button button-light" id="gate-login" type="button">Ya tengo cuenta</button></div>
+        <div id="carrier-notice" class="empty-state" hidden><h3>Completa tu registro de transportista</h3><p>Sube los documentos del operador, conductor y vehículo. Deben estar revisados y vigentes para consultar nuevas cargas y recibir viajes.</p><a class="button button-dark" href="carrier.html">Completar mi expediente</a></div><div id="access-gate" class="empty-state access-gate"><h3>Regístrate para ver las cargas</h3><p>¿Eres transportista? Crea tu cuenta para consultar rutas, pagos y contactos. Si ya tienes una cuenta, inicia sesión.</p><button class="button button-dark" id="register-carrier" type="button">Registrarme como transportista</button><button class="button button-light" id="gate-login" type="button">Ya tengo cuenta</button></div>
         <div id="load-board" hidden>
         <form class="search-panel" id="search-form">
           <label class="search-field">
@@ -176,7 +176,7 @@
       </form>
     </dialog>
 
-    <dialog class="post-dialog account-dialog" id="assign-dialog" aria-labelledby="assign-title"><form id="assign-form" class="post-form"><div class="dialog-heading"><div><h2 id="assign-title">Asignar transportista</h2><p id="assign-route"></p></div><button class="close-button" id="assign-close" type="button" aria-label="Cerrar asignación">×</button></div><label class="form-field"><span>Correo del transportista registrado</span><input name="carrierEmail" type="email" maxlength="120" required autocomplete="off"></label><p class="account-help">Usa el correo de la cuenta con la que se registró como Transportista. Deberá aceptar el viaje en Mis cargas.</p><div id="assign-quote" class="freight-quote"></div><label class="form-note"><input name="acceptCommission" type="checkbox" required> Confirmo la asignación y acepto pagar la comisión adicional del 10% a RutaCarga al finalizar la carga.</label><p id="assign-error" class="account-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-dark" type="submit">Asignar transportista</button></div></form></dialog>
+    <dialog class="post-dialog account-dialog" id="assign-dialog" aria-labelledby="assign-title"><form id="assign-form" class="post-form"><div class="dialog-heading"><div><h2 id="assign-title">Asignar transportista</h2><p id="assign-route"></p></div><button class="close-button" id="assign-close" type="button" aria-label="Cerrar asignación">×</button></div><label class="form-field"><span>Correo del transportista registrado</span><input name="carrierEmail" type="email" maxlength="120" required autocomplete="off"></label><p class="account-help">Solo se muestran unidades con documentos aprobados y vigentes hasta la fecha de recogida, equipo compatible y capacidad suficiente.</p><button type="button" id="assign-lookup" class="button button-light">Consultar unidades verificadas</button><label class="form-field"><span>Unidad y conductor revisados</span><select name="vehicleId" required><option value="">Consulta primero el transportista</option></select></label><p id="assign-verified" class="account-help"></p><div id="assign-quote" class="freight-quote"></div><label class="form-note"><input name="acceptCommission" type="checkbox" required> Confirmo la asignación y acepto pagar la comisión adicional del 10% a RutaCarga al finalizar la carga.</label><p id="assign-error" class="account-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-dark" type="submit">Asignar transportista</button></div></form></dialog>
     <dialog class="post-dialog account-dialog" id="auth-dialog" aria-labelledby="auth-title">
       <form class="post-form" id="auth-form">
         <div class="dialog-heading"><div><div class="eyebrow">TU CUENTA DE RUTACARGA</div><h2 id="auth-title">Iniciar sesión</h2><p id="auth-description">Ingresa tu correo y contraseña para continuar.</p></div><button class="close-button" id="auth-close" type="button" aria-label="Cerrar acceso a cuenta">×</button></div>
@@ -188,7 +188,7 @@
           <p id="auth-password-help" class="account-help">Usa la contraseña de tu cuenta de RutaCarga.</p>
           <label class="form-field" id="auth-confirm-field" hidden><span>Repite la contraseña</span><input name="confirmPassword" type="password" autocomplete="new-password" maxlength="128" disabled></label>
         </div>
-        <p id="auth-error" class="account-error" role="alert" hidden></p>
+        <p class="account-help">El registro de transportistas continúa con la carga de cédula, licencia, seguros y documentos de cada vehículo. El acceso a nuevas cargas se habilita tras su revisión.</p><p id="auth-error" class="account-error" role="alert" hidden></p>
         <div class="dialog-actions"><button class="button button-dark" id="auth-submit" type="submit">Iniciar sesión</button></div>
       </form>
     </dialog>

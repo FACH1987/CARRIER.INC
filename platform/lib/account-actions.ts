@@ -23,7 +23,7 @@ export async function register(request: Request) {
     if (existing) throw new AuthError('No se pudo crear la cuenta con ese correo. Si ya tienes una cuenta, inicia sesión.', 409);
     const account = { id: crypto.randomUUID(), name: data.name, email: data.email, role: data.role };
     await db.insert(users).values({ ...account, passwordHash: await hashPassword(data.password), createdAt: new Date().toISOString() });
-    return responseJson({ user: withAdminAccess(account) }, 201, await startSession(request, account.id));
+    return responseJson({ user: withAdminAccess(account), onboardingRequired: data.role === 'transportista' }, 201, await startSession(request, account.id));
   } catch (error) { return authFailure(error); }
 }
 

@@ -1,4 +1,4 @@
-import { sqliteTable, text, real, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, real, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(), email: text('email').notNull().unique(),
   role: text('role', { enum: ['empresa', 'transportista'] }).notNull().default('empresa'),
@@ -12,6 +12,31 @@ export const sessions = sqliteTable('sessions', {
 export const authLimits = sqliteTable('auth_limits', {
   key: text('key').primaryKey(), attempts: integer('attempts').notNull(), expiresAt: integer('expires_at').notNull()
 }, (t) => [index('auth_limits_expiry_idx').on(t.expiresAt)]);
+export const carrierProfiles = sqliteTable('carrier_profiles', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  kind: text('kind', { enum: ['independiente', 'flota'] }).notNull(),
+  legalName: text('legal_name').notNull(), consentAt: text('consent_at').notNull()
+});
+export const carrierDrivers = sqliteTable('carrier_drivers', {
+  id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(), categories: text('categories').notNull()
+});
+export const carrierVehicles = sqliteTable('carrier_vehicles', {
+  id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  driverId: text('driver_id').notNull().references(() => carrierDrivers.id, { onDelete: 'restrict' }),
+  plate: text('plate').notNull(), description: text('description').notNull(),
+  equipment: text('equipment').notNull(), capacityKg: real('capacity_kg').notNull(),
+  requiredCategory: text('required_category').notNull()
+});
+export const carrierDocuments = sqliteTable('carrier_documents', {
+  id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  entityType: text('entity_type', { enum: ['profile', 'driver', 'vehicle'] }).notNull(), entityId: text('entity_id').notNull(),
+  type: text('type').notNull(), objectKey: text('object_key'), mime: text('mime'), size: integer('size'),
+  issuedAt: text('issued_at'), expiresAt: text('expires_at'), noExpiry: integer('no_expiry', { mode: 'boolean' }).notNull().default(false),
+  exemption: text('exemption'), status: text('status', { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
+  revision: text('revision').notNull(), uploadedAt: text('uploaded_at').notNull(),
+  reviewedAt: text('reviewed_at'), reviewedBy: text('reviewed_by'), reviewNote: text('review_note')
+}, t => [index('carrier_documents_user_idx').on(t.userId), uniqueIndex('carrier_documents_slot_idx').on(t.userId, t.entityType, t.entityId, t.type)]);
 export const loads = sqliteTable('loads', {
   id: text('id').primaryKey(),
   ownerId: text('owner_id').notNull(),
@@ -22,6 +47,8 @@ export const loads = sqliteTable('loads', {
   createdAt: text('created_at').notNull(),
   status: text('status', { enum: ['disponible', 'asignada', 'en_transito', 'entregada', 'finalizada'] }).notNull().default('disponible'),
   carrierId: text('carrier_id').references(() => users.id, { onDelete: 'restrict' }),
+  transportVehicleId: text('transport_vehicle_id').references(() => carrierVehicles.id, { onDelete: 'restrict' }),
+  transportDriverId: text('transport_driver_id').references(() => carrierDrivers.id, { onDelete: 'restrict' }),
   assignedAt: text('assigned_at'), acceptedAt: text('accepted_at'), deliveredAt: text('delivered_at'), completedAt: text('completed_at'),
   feeRateBps: integer('fee_rate_bps').notNull().default(0),
   feeCents: integer('fee_cents').notNull().default(0),

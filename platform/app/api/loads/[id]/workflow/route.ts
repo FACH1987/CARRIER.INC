@@ -5,10 +5,12 @@ import { commissions, loads, users } from '../../../../../db/schema';
 import { usesSupabase } from '../../../../../db/supabase';
 import { AuthError, authFailure, currentAccount, readAuthJson, responseJson } from '../../../../../lib/account-auth';
 import { COMMISSION_RATE_BPS, freightQuote } from '../../../../../lib/billing';
+import { carrierDossier, requireCarrierReady, todayNI } from '../../../../../lib/carrier-compliance';
 
 export const dynamic = 'force-dynamic';
 const actionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('assign'), carrierEmail: z.string().trim().email().max(120).transform(value => value.toLowerCase()), acceptCommission: z.literal(true) }),
+  z.object({ action: z.literal('options'), carrierEmail: z.string().trim().email().max(120).transform(value => value.toLowerCase()) }),
+  z.object({ action: z.literal('assign'), carrierEmail: z.string().trim().email().max(120).transform(value => value.toLowerCase()), vehicleId: z.string().uuid(), acceptCommission: z.literal(true) }),
   z.object({ action: z.enum(['accept', 'reject', 'cancel_assignment', 'deliver', 'complete']) })
 ]);
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -27,13 +29,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const carrier = load.carrierId === account.id;
     const data = parsed.data;
     const now = new Date().toISOString();
-    if (data.action === 'assign') {
+    if (data.action === 'assign' || data.action === 'options') {
       if (!owner) throw new AuthError('Solo quien publicó la carga puede asignarla.', 403);
       if (load.status !== 'disponible') throw new AuthError('La carga ya no está disponible para asignar.', 409);
       const [candidate] = await db.select({ id: users.id, name: users.name }).from(users).where(and(eq(users.email, data.carrierEmail), eq(users.role, 'transportista'))).limit(1);
       if (!candidate || candidate.id === account.id) throw new AuthError('Indica el correo de otro usuario registrado como transportista.', 400);
+      const day = load.pickupDate > todayNI() ? load.pickupDate : todayNI();
+      if (data.action === 'options') {
+        const dossier = await carrierDossier(candidate.id, day);
+        return responseJson({ vehicles: dossier.vehicles.filter(vehicle => vehicle.ready && vehicle.equipment === load.equipment && vehicle.capacityKg >= load.weight).map(vehicle => ({ id: vehicle.id, plate: vehicle.plate, description: vehicle.description, driverName: vehicle.driverName, category: vehicle.requiredCategory })), checkedThrough: day });
+      }
+      const vehicle = await requireCarrierReady(candidate.id, data.vehicleId, day);
+      if (vehicle.equipment !== load.equipment || vehicle.capacityKg < load.weight) throw new AuthError('El vehículo no corresponde al equipo o capacidad de la carga.');
       const quote = freightQuote(load.pay, load.feeAcceptedAt ? load.feeRateBps : COMMISSION_RATE_BPS);
-      const updated = await db.update(loads).set({ carrierId: candidate.id, status: 'asignada', assignedAt: now, acceptedAt: null, deliveredAt: null, completedAt: null, feeRateBps: quote.rateBps, feeCents: quote.commissionCents, feeAcceptedAt: load.feeAcceptedAt || now })
+      const updated = await db.update(loads).set({ carrierId: candidate.id, transportVehicleId: vehicle.id, transportDriverId: vehicle.driverId, status: 'asignada', assignedAt: now, acceptedAt: null, deliveredAt: null, completedAt: null, feeRateBps: quote.rateBps, feeCents: quote.commissionCents, feeAcceptedAt: load.feeAcceptedAt || now })
         .where(and(eq(loads.id, id), eq(loads.ownerId, load.ownerId), eq(loads.status, 'disponible'))).returning({ id: loads.id });
       if (!updated.length) throw new AuthError('La carga cambió. Actualiza el tablero.', 409);
       return responseJson({ status: 'asignada', carrierName: candidate.name, quote });
@@ -57,8 +66,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     } else if (!carrier) throw new AuthError('Solo el transportista asignado puede realizar esta acción.', 403);
     const expected = data.action === 'deliver' ? 'en_transito' : 'asignada';
     if (load.status !== expected) throw new AuthError('El estado de la carga no permite esa acción.', 409);
+    if (data.action === 'accept') {
+      if (!load.transportVehicleId) throw new AuthError('Solicita una nueva asignación con vehículo verificado.', 409);
+      await requireCarrierReady(account.id, load.transportVehicleId, load.pickupDate);
+    }
     const status = data.action === 'accept' ? 'en_transito' : data.action === 'deliver' ? 'entregada' : 'disponible';
-    const updated = await db.update(loads).set({ status, ...(status === 'disponible' ? { carrierId: null, assignedAt: null, acceptedAt: null } : {}), ...(status === 'en_transito' ? { acceptedAt: now } : {}), ...(status === 'entregada' ? { deliveredAt: now } : {}) })
+    const updated = await db.update(loads).set({ status, ...(status === 'disponible' ? { carrierId: null, transportVehicleId: null, transportDriverId: null, assignedAt: null, acceptedAt: null } : {}), ...(status === 'en_transito' ? { acceptedAt: now } : {}), ...(status === 'entregada' ? { deliveredAt: now } : {}) })
       .where(and(eq(loads.id, id), eq(loads.status, expected), data.action === 'cancel_assignment' ? eq(loads.ownerId, load.ownerId) : eq(loads.carrierId, account.id))).returning({ id: loads.id });
     if (!updated.length) throw new AuthError('La carga cambió. Actualiza el tablero.', 409);
     return responseJson({ status });

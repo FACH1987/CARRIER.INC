@@ -32,3 +32,5 @@ Administración: la cuenta autorizada dispone del botón **Usuarios**, con búsq
 El panel identifica el correo del administrador y ofrece **Eliminar** para las demás cuentas sin operaciones protegidas. Las cargas asignadas y el historial financiero impiden eliminar las cuentas involucradas.
 
 Comisiones: la empresa acepta un 10% adicional al flete. Al confirmar la finalización, se genera una comisión pendiente. El administrador registra manualmente los pagos recibidos con su referencia desde **Comisiones**. El sistema no transfiere dinero. Consulta [el flujo y sus límites](platform/docs/commissions.md).
+
+Transportistas: el alta continúa en **Mi expediente**, con documentos privados de operador, conductores y vehículos. Se exige revisión del administrador y vigencia antes de consultar nuevas cargas o recibir una asignación. Soporta independientes y flotas; consulta [los controles y la configuración local](platform/docs/carrier-documents.md).

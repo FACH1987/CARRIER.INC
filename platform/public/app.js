@@ -32,6 +32,8 @@ function setAccount(user) {
   signedIn = Boolean(user);
   document.querySelector('#admin-open').hidden = !user?.isAdmin;
   document.querySelector('#commissions-open').hidden = !user?.isAdmin;
+  document.querySelector('#carrier-open').hidden = user?.role !== 'transportista';
+  if (!user) document.querySelector('#carrier-notice').hidden = true;
   document.querySelector('#access-gate').hidden = signedIn;
   document.querySelector('#load-board').hidden = !signedIn;
   document.querySelector('#board-meta').hidden = !signedIn;
@@ -93,10 +95,22 @@ async function updateLoads() {
       document.querySelector('#connection-status').textContent = '';
       return;
     }
+    if (response.status === 403) {
+      const result = await response.json();
+      if (result.onboardingRequired) {
+        setAccount(result.user); loads = []; renderLoads();
+        sessionKnown = true;
+        document.querySelector('#connection-status').textContent = result.error;
+        document.querySelector('#carrier-notice').hidden = false;
+        document.querySelector('#load-board').hidden = true;
+        return;
+      }
+    }
     if (!response.ok) throw new Error('No se pudieron consultar las cargas.');
     const data = await response.json();
     loads = data.loads.filter(load => !removedLoadIds.has(load.id));
     setAccount(data.user || null);
+    document.querySelector('#carrier-notice').hidden = true;
     sessionKnown = true;
     document.querySelector('#sign-in').hidden = signedIn;
     document.querySelector('#connection-status').textContent = 'Conectado · Las cargas se comparten entre dispositivos. Actualización cada 30 segundos.';
@@ -254,9 +268,10 @@ function workflowControls(load) {
 function workflowSummary(load) {
   const status = escapeHtml(statusNames[load.status] || 'Disponible');
   const carrier = load.carrierName ? '<span>Transportista: ' + escapeHtml(load.carrierName) + '</span>' : '';
+  const unit = load.vehiclePlate ? '<span>Unidad: ' + escapeHtml(load.vehiclePlate) + ' · Conductor: ' + escapeHtml(load.driverName || '') + ' · Categoría: ' + escapeHtml(load.licenseCategory || '') + '</span>' : '';
   const pricing = load.quote ? '<span>' + escapeHtml(quoteText(load.quote)) + (load.commissionAccepted ? '' : ' · Requiere aceptación al asignar') + '</span>' : '';
   const invoice = load.commission ? '<strong>' + (load.commission.status === 'paid' ? 'Comisión registrada como pagada' : 'Comisión pendiente de pago por la empresa') + ': ' + escapeHtml(formatCurrency(load.commission.amountCents / 100)) + '</strong>' : '';
-  return '<span class="shipment-status">' + status + '</span>' + carrier + pricing + invoice;
+  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + pricing + invoice;
 }
 async function workflowRequest(id, payload) {
   const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -283,6 +298,8 @@ loadList.addEventListener('click', async event => {
     if (!load.canAssign) return;
     assigningId = load.id;
     assignForm.reset();
+    assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Consulta primero el transportista</option>';
+    document.querySelector('#assign-verified').textContent = '';
     document.querySelector('#assign-route').textContent = load.origin + ' → ' + load.destination;
     document.querySelector('#assign-quote').textContent = quoteText(load.quote);
     document.querySelector('#assign-error').hidden = true;
@@ -309,6 +326,25 @@ loadList.addEventListener('click', async event => {
 });
 document.querySelector('#assign-close').addEventListener('click', () => { if (!workflowBusy.has(assigningId)) assignDialog.close(); });
 assignDialog.addEventListener('cancel', event => { if (workflowBusy.has(assigningId)) event.preventDefault(); });
+assignForm.elements.namedItem('carrierEmail').addEventListener('input', () => {
+  assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Vuelve a consultar este correo</option>';
+  document.querySelector('#assign-verified').textContent = '';
+});
+document.querySelector('#assign-lookup').addEventListener('click', async event => {
+  if (!assigningId || workflowBusy.has(assigningId)) return;
+  const email = assignForm.elements.namedItem('carrierEmail');
+  if (!email.reportValidity()) return;
+  const button = event.currentTarget; button.disabled = true;
+  workflowBusy.add(assigningId);
+  const requestedEmail = email.value.trim();
+  try {
+    const result = await workflowRequest(assigningId, { action: 'options', carrierEmail: requestedEmail });
+    if (requestedEmail !== email.value.trim()) return;
+    assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Selecciona una unidad</option>' + result.vehicles.map(v => `<option value="${escapeHtml(v.id)}">${escapeHtml(v.plate)} · ${escapeHtml(v.driverName)} · Categoría ${escapeHtml(v.category)}</option>`).join('');
+    document.querySelector('#assign-verified').textContent = result.vehicles.length ? 'Documentación revisada y vigente hasta la recogida: ' + result.checkedThrough + '. No sustituye la autorización oficial.' : 'No tiene unidades habilitadas para esta fecha, equipo y capacidad. El transportista debe completar o renovar su expediente.';
+  } catch (error) { document.querySelector('#assign-error').textContent = error.message; document.querySelector('#assign-error').hidden = false; }
+  finally { workflowBusy.delete(assigningId); button.disabled = false; }
+});
 assignForm.addEventListener('submit', async event => {
   event.preventDefault();
   if (!assignForm.reportValidity() || !assigningId || workflowBusy.has(assigningId)) return;
@@ -318,7 +354,7 @@ assignForm.addEventListener('submit', async event => {
   workflowBusy.add(id);
   document.querySelector('#assign-error').hidden = true;
   try {
-    await workflowRequest(id, { action: 'assign', carrierEmail: assignForm.elements.namedItem('carrierEmail').value.trim(), acceptCommission: assignForm.elements.namedItem('acceptCommission').checked });
+    await workflowRequest(id, { action: 'assign', carrierEmail: assignForm.elements.namedItem('carrierEmail').value.trim(), vehicleId: assignForm.elements.namedItem('vehicleId').value, acceptCommission: assignForm.elements.namedItem('acceptCommission').checked });
     assignDialog.close();
     showMyLoads();
     await refreshLoads();
@@ -470,6 +506,7 @@ authForm.addEventListener('submit', async (event) => {
     sessionKnown = true;
     authForm.reset();
     authDialog.close();
+    if (result.onboardingRequired) { window.location.assign('/carrier.html'); return; }
     showToast(authMode === 'register' ? 'Tu cuenta está lista.' : 'Sesión iniciada.');
     if (continueToPublish) await openPostDialog();
     refreshLoads();

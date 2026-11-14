@@ -23,7 +23,7 @@ async function api(route, { method = 'GET', body, cookie, headers = {} } = {}) {
   try { data = JSON.parse(text); } catch { throw new Error(`Non-JSON response (${response.status}): ${text.slice(0, 250)}`); }
   return { status: response.status, headers: response.headers, json: async () => data };
 }
-test('local registration, session, cargo ownership, logout and access protection', { timeout: 45000 }, async t => {
+test('local accounts, private carrier documents, verified dispatch and commissions', { timeout: 60000 }, async t => {
   runtime = new Miniflare({
     modules: [
       { type: 'ESModule', path: path.resolve('dist/server/index.js') },
@@ -33,6 +33,7 @@ test('local registration, session, cargo ownership, logout and access protection
     modulesRoot: path.resolve('dist/server'),
     compatibilityDate: '2026-05-15', compatibilityFlags: ['nodejs_compat'],
     d1Databases: ['DB'], d1Persist: false,
+    r2Buckets: ['DOCUMENTS'], r2Persist: false,
     bindings: { ADMIN_ACCOUNT_ID: adminId, ADMIN_SETUP_TOKEN: setupToken, ADMIN_SETUP_EMAIL: email }
   });
   t.after(async () => { await runtime.dispose(); });
@@ -153,8 +154,10 @@ test('local registration, session, cargo ownership, logout and access protection
       assert.notEqual((await created.json()).user.id, adminId);
       const carrierCookie = cookieFrom(created);
       const active = await api('/api/loads', { cookie: carrierCookie });
-      assert.equal(active.status, 200);
-      assert(Array.isArray((await active.json()).loads));
+      assert.equal(active.status, 403);
+      assert.equal((await active.json()).onboardingRequired, true);
+      assert.equal((await created.json()).onboardingRequired, true);
+      assert.equal((await api('/api/loads?mine=1', { cookie: carrierCookie })).status, 200);
       const session = await api('/api/auth/session', { cookie: carrierCookie });
       assert.equal((await session.json()).user.role, 'transportista');
       const loggedIn = await api('/api/auth/login', { method: 'POST', body: { email: carrierEmail, password } });
@@ -212,7 +215,7 @@ test('local registration, session, cargo ownership, logout and access protection
       const victimId = randomUUID();
       const victimEmail = 'delete-user-' + suffix + '@example.com';
       await db.prepare('insert into users (id, email, name, role, password_hash, created_at) values (?, ?, ?, ?, ?, ?)')
-        .bind(victimId, victimEmail, 'Temporary account deletion fixture', 'transportista', passwordRow.password_hash, new Date().toISOString()).run();
+        .bind(victimId, victimEmail, 'Temporary account deletion fixture', 'empresa', passwordRow.password_hash, new Date().toISOString()).run();
       const victimLogin = await api('/api/auth/login', { method: 'POST', body: { email: victimEmail, password } });
       assert.equal(victimLogin.status, 200);
       const victimCookie = cookieFrom(victimLogin);
@@ -235,6 +238,82 @@ test('local registration, session, cargo ownership, logout and access protection
       const carrierAccount = await db.prepare("select id, email from users where role = 'transportista' and email like 'carrier-%'").first();
       const carrierLogin = await api('/api/auth/login', { method: 'POST', body: { email: carrierAccount.email, password } });
       const carrierSession = cookieFrom(carrierLogin);
+      assert.equal((await api('/api/carrier')).status, 401);
+      assert.equal((await api('/api/carrier?userId=' + carrierAccount.id, { cookie })).status, 403);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { action: 'profile', kind: 'flota', legalName: 'Fleet fixture', consent: true } })).status, 201);
+      const createdDriver = await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { action: 'driver', name: 'Driver fixture', categories: ['4A'] } });
+      assert.equal(createdDriver.status, 201);
+      const driverId = (await createdDriver.json()).id;
+      const vehicleData = { action: 'vehicle', driverId, plate: 'M-TEST-001', description: 'Truck fixture', equipment: 'Refrigerado', capacityKg: 5000, requiredCategory: '4A' };
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { ...vehicleData, requiredCategory: '6A' } })).status, 400);
+      const createdVehicle = await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: vehicleData });
+      assert.equal(createdVehicle.status, 201);
+      const vehicleId = (await createdVehicle.json()).id;
+      const secondVehicle = await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { ...vehicleData, plate: 'M-TEST-002' } });
+      assert.equal(secondVehicle.status, 201);
+      const independentId = randomUUID(), independentEmail = 'independent-' + suffix + '@example.com';
+      await db.prepare('insert into users (id,email,name,role,password_hash,created_at) values (?,?,?,?,?,?)').bind(independentId, independentEmail, 'Independent fixture', 'transportista', passwordRow.password_hash, new Date().toISOString()).run();
+      const independentLogin = await api('/api/auth/login', { method: 'POST', body: { email: independentEmail, password } });
+      const independentSession = cookieFrom(independentLogin);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: independentSession, body: { action: 'profile', kind: 'independiente', legalName: 'Independent fixture', consent: false } })).status, 400);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: independentSession, body: { action: 'profile', kind: 'independiente', legalName: 'Independent fixture', consent: true } })).status, 201);
+      const independentDriver = await api('/api/carrier', { method: 'POST', cookie: independentSession, body: { action: 'driver', name: 'Independent fixture', categories: ['4A'] } });
+      assert.equal(independentDriver.status, 201);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: independentSession, body: { action: 'driver', name: 'Another fixture', categories: ['4A'] } })).status, 409);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: independentSession, body: { ...vehicleData, plate: 'I-TEST-001' } })).status, 400);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: independentSession, body: { ...vehicleData, driverId: (await independentDriver.json()).id, plate: 'I-TEST-001' } })).status, 201);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: independentSession, body: { ...vehicleData, driverId: (await independentDriver.json()).id, plate: 'I-TEST-002' } })).status, 409);
+      // Unassigned account deletion must also remove fleet/driver references safely.
+      assert.equal((await api('/api/admin/users/' + independentId, { method: 'DELETE', cookie: adminCookie })).status, 200);
+      // This second truck remains incomplete and must never be offered for dispatch.
+      const upload = async (metadata, { session = carrierSession, content = '%PDF-1.4\nIsolated test fixture only', origin = base, mime = 'application/pdf' } = {}) => {
+        const result = await runtime.dispatchFetch(base + '/api/carrier/documents', { method: 'POST', headers: { Origin: origin, Cookie: session, 'Content-Type': mime, 'X-Document-Metadata': encodeURIComponent(new URLSearchParams(metadata).toString()) }, body: content });
+        return { status: result.status, data: await result.json() };
+      };
+      let dossier = await (await api('/api/carrier', { cookie: carrierSession })).json();
+      const metadata = { entityType: 'driver', entityId: driverId, type: 'license', issuedAt: '2026-01-01', expiresAt: '2100-12-31' };
+      assert.equal((await upload({ ...metadata, expiresAt: '2000-01-01' })).status, 400);
+      assert.equal((await upload({ ...metadata, expiresAt: '2100-02-30' })).status, 400);
+      assert.equal((await upload(metadata, { content: '<script>bad</script>', mime: 'image/png' })).status, 400);
+      assert.equal((await upload(metadata, { origin: 'https://other.example' })).status, 403);
+      assert.equal((await upload({ ...metadata, entityId: randomUUID() })).status, 404);
+      assert.equal((await upload({ ...metadata, exemption: 'Does not apply to my driver license' })).status, 400);
+      const slots = [
+        ...dossier.profileChecklist.map(item => ({ entityType: 'profile', entityId: carrierAccount.id, type: item.type })),
+        ...dossier.drivers[0].checklist.map(item => ({ entityType: 'driver', entityId: driverId, type: item.type })),
+        ...dossier.vehicles[0].checklist.map(item => ({ entityType: 'vehicle', entityId: vehicleId, type: item.type }))
+      ];
+      for (const slot of slots) assert.equal((await upload({ ...metadata, ...slot })).status, 201);
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
+      dossier = await (await api('/api/carrier?userId=' + carrierAccount.id, { cookie: adminCookie })).json();
+      const docs = [...dossier.profileChecklist, ...dossier.drivers[0].checklist, ...dossier.vehicles[0].checklist].map(item => item.document);
+      const privateUrl = '/api/carrier/documents/' + docs[0].id;
+      assert.equal((await runtime.dispatchFetch(base + privateUrl)).status, 401);
+      assert.equal((await runtime.dispatchFetch(base + privateUrl, { headers: { Cookie: cookie } })).status, 404);
+      const download = await runtime.dispatchFetch(base + privateUrl, { headers: { Cookie: adminCookie } });
+      assert.equal(download.status, 200);
+      assert.match(download.headers.get('content-disposition'), /^attachment;/);
+      assert.match(download.headers.get('cache-control'), /no-store/);
+      assert(!JSON.stringify(dossier).includes('objectKey'));
+      const review = (doc, session = adminCookie, overrides = {}) => api('/api/admin/documents/' + doc.id + '/review', { method: 'POST', cookie: session, body: { revision: doc.revision, status: 'approved', note: 'Reviewed isolated test fixture', attest: true, ...overrides } });
+      assert.equal((await review(docs[0], carrierSession)).status, 403);
+      assert.equal((await review(docs[0], adminCookie, { revision: randomUUID() })).status, 409);
+      for (const doc of docs) assert.equal((await review(doc)).status, 200);
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
+      dossier = await (await api('/api/carrier', { cookie: carrierSession })).json();
+      assert.equal(dossier.ready, true);
+      assert.equal(dossier.vehicles.filter(v => v.ready).length, 1);
+      // A replacement revokes its previous review immediately.
+      const license = dossier.drivers[0].checklist.find(item => item.type === 'license').document;
+      assert.equal((await upload(metadata)).status, 201);
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
+      assert.equal((await review(license)).status, 409);
+      const newLicense = (await (await api('/api/carrier', { cookie: carrierSession })).json()).drivers[0].checklist.find(item => item.type === 'license').document;
+      assert.equal((await review(newLicense)).status, 200);
+      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2000-01-01', newLicense.id).run();
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
+      assert.equal((await review(newLicense)).status, 409);
+      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2100-12-31', newLicense.id).run();
       const freight = { origin: 'Managua', destination: 'Leon', pickupDate: '2099-12-01', equipment: 'Refrigerado', weight: 1000, pay: 100.05, company: 'Commission test', email };
       assert.equal((await api('/api/loads', { method: 'POST', cookie, body: freight })).status, 400);
       const posted = await api('/api/loads', { method: 'POST', cookie, body: { ...freight, acceptCommission: true, feeCents: 1 } });
@@ -243,7 +322,16 @@ test('local registration, session, cargo ownership, logout and access protection
       assert.equal(financialLoad.quote.commissionCents, 1001);
       assert.equal(financialLoad.quote.totalCents, 11006);
       const workflow = '/api/loads/' + financialLoad.id + '/workflow';
-      const act = (action, session = cookie, extra = {}) => api(workflow, { method: 'POST', cookie: session, body: { action, ...extra } });
+      const act = (action, session = cookie, extra = {}) => api(workflow, { method: 'POST', cookie: session, body: { action, ...(action === 'assign' ? { vehicleId } : {}), ...extra } });
+      const options = await act('options', cookie, { carrierEmail: carrierAccount.email });
+      assert.equal(options.status, 200);
+      assert.deepEqual((await options.json()).vehicles.map(v => v.id), [vehicleId]);
+      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2027-01-01', newLicense.id).run();
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
+      assert.deepEqual((await (await act('options', cookie, { carrierEmail: carrierAccount.email })).json()).vehicles, []);
+      assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email, acceptCommission: true })).status, 403);
+      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2100-12-31', newLicense.id).run();
+      assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email, acceptCommission: true, vehicleId: (await secondVehicle.json()).id })).status, 403);
       assert.equal((await act('complete')).status, 409);
       assert.equal((await act('assign', carrierSession, { carrierEmail: carrierAccount.email, acceptCommission: true })).status, 403);
       assert.equal((await act('assign', cookie, { carrierEmail: email, acceptCommission: true })).status, 400);
