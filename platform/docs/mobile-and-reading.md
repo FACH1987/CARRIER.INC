@@ -1,5 +1,7 @@
 # Teléfonos y notificaciones por SMS
 
+La futura migración a Supabase conserva teléfonos, consentimiento, verificación y deduplicación de envíos. El [plan de migración](../supabase/README.md) detalla la pausa y reanudación del ejecutor para evitar mensajes duplicados. D1 sigue activo.
+
 Estado de esta versión: registro de teléfonos y avisos dentro de la app funcionales. Integración Twilio preparada, **sin activar**, porque el propietario todavía no dispone de esas cuentas. No se enviaron SMS ni documentos reales a servicios externos durante el desarrollo. No hay programación de envíos activa.
 
 ## Registro y privacidad

@@ -13,7 +13,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test:accounts": "node --test tests/passwords.test.mjs tests/document-rules.test.mjs tests/mobile-reading.test.mjs tests/accounts.integration.mjs",
-    "local:admin": "node scripts/local-admin.mjs"
+    "local:admin": "node scripts/local-admin.mjs",
+    "test:supabase-preparation": "node --test tests/supabase-preparation.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

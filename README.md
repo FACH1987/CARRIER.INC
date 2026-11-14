@@ -19,7 +19,7 @@ El proyecto de Sites y la conexión D1 se declaran en `platform/.openai/hosting.
 
 ## Base de datos elegida
 
-Se mantiene Cloudflare D1 como base de datos activa. Supabase queda como una opción futura; su preparación está en platform/supabase/README.md. No activar la migración ni configurar una suscripción para ella hasta que el usuario decida retomarla.
+Se mantiene Cloudflare D1 como base de datos activa. Supabase queda como una opción futura; el [paquete de preparación](platform/supabase/README.md) incluye el esquema completo, conversión sin conexión y continuidad de cuentas, documentos, comisiones y SMS. No activar la migración ni configurar una suscripción para ella hasta que el usuario decida retomarla.
 
 Identidad visual: RutaCarga por Güegüense Digital, con azul marino, azul eléctrico y celeste.
 
