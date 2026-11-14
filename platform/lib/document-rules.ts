@@ -20,7 +20,7 @@ export function reminderStage(days: number | null) {
   if (days === null || days > 30) return null;
   return days < 0 ? 'expired' : days === 0 ? 'today' : days <= 1 ? '1' : days <= 7 ? '7' : days <= 15 ? '15' : '30';
 }
-export type DocumentInput = { type: string; status?: string; objectKey?: string | null; size?: number | null; issuedAt?: string | null; expiresAt?: string | null; noExpiry?: boolean; exemption?: string | null; ocrStatus?: string; ocrSummary?: string | null };
+export type DocumentInput = { type: string; status?: string; objectKey?: string | null; size?: number | null; issuedAt?: string | null; expiresAt?: string | null; noExpiry?: boolean; exemption?: string | null };
 export function documentDateError(type: string, issuedAt: string, expiresAt: string | null, noExpiry: boolean, day: string) {
   if (!validDate(issuedAt) || issuedAt > day) return 'La fecha de emisión debe ser válida y no futura.';
   if (noExpiry) return ['identity', 'circulation', 'ruc', 'company_registration'].includes(type) ? null : 'Este documento necesita fecha de vencimiento.';
@@ -32,9 +32,6 @@ export function documentDateError(type: string, issuedAt: string, expiresAt: str
 export function evaluateDocument(doc: DocumentInput | undefined, day: string) {
   if (!doc) return { valid: false, state: 'missing', reason: 'Falta subir este documento.', daysLeft: null };
   if (doc.status === 'rejected') return { valid: false, state: 'correction', reason: 'El documento requiere corrección.', daysLeft: null };
-  if (doc.ocrStatus === 'completed' && doc.ocrSummary) {
-    try { if (JSON.parse(doc.ocrSummary).state === 'inconsistent') return { valid: false, state: 'content_mismatch', reason: 'La lectura del archivo encontró fechas distintas de las registradas. Corrige y vuelve a subir el documento.', daysLeft: null }; } catch { return { valid: false, state: 'invalid', reason: 'El resultado de lectura requiere actualización.', daysLeft: null }; }
-  }
   if (doc.exemption) return { valid: true, state: 'declared_exemption', reason: 'No aplicabilidad declarada por el operador.', daysLeft: null };
   if (!doc.objectKey || !doc.size) return { valid: false, state: 'missing', reason: 'Falta el archivo del documento.', daysLeft: null };
   const error = documentDateError(doc.type, doc.issuedAt || '', doc.expiresAt || null, Boolean(doc.noExpiry), day);

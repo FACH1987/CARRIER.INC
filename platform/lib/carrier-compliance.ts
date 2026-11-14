@@ -48,7 +48,7 @@ export async function carrierDossier(userId: string, day = todayNI()) {
     const checklist = checked('vehicle', vehicle.id, [...requirements.vehicle, ...(vehicle.requiredCategory === '7' ? ['special_permit'] : [])]);
     return { ...vehicle, driverName: driver?.name, categoryError, checklist, ready: profileReady && Boolean(driver?.ready) && !categoryError && checklist.every(item => item.valid) };
   });
-  return { profile: profile || null, profileChecklist, drivers: driverRows, vehicles: vehicleRows, ready: profileReady && vehicleRows.some(row => row.ready), day, documentLabels, exemptable, timeless, evaluation: { ruleset: RULESET, sources: legalSources, scope: 'Comprobación de archivos presentes, fechas y categorías registradas. La lectura OCR requiere conectar el servicio y autorizar cada archivo. Ningún resultado certifica autenticidad ni cumplimiento legal completo.' } };
+  return { profile: profile || null, profileChecklist, drivers: driverRows, vehicles: vehicleRows, ready: profileReady && vehicleRows.some(row => row.ready), day, documentLabels, exemptable, timeless, evaluation: { ruleset: RULESET, sources: legalSources, scope: 'Comprobación automática de presencia, fechas declaradas y compatibilidad básica de categorías. No incluye lectura del contenido de los archivos ni autenticación ante autoridades.' } };
 }
 export async function requireCarrierReady(userId: string, vehicleId?: string, day = todayNI()) {
   const dossier = await carrierDossier(userId, day < todayNI() ? todayNI() : day);

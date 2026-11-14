@@ -37,4 +37,4 @@ Transportistas: el alta continúa en **Mi expediente**, con documentos privados 
 
 El centro **Avisos** recuerda vencimientos a 30, 15, 7 y 1 día dentro de la app. Las unidades con documentos vencidos pierden acceso a nuevas cargas hasta renovar. La evaluación automática comprueba archivos presentes, fechas declaradas y compatibilidad básica de categorías; no autentica el contenido de las copias ni sustituye la validación ante las autoridades.
 
-Los nuevos transportistas registran teléfono y pueden configurar avisos por SMS. Los avisos de cargas compatibles ya aparecen dentro de la app. Los SMS por Twilio y la lectura de archivos por Azure están preparados, pendientes de crear/conectar las cuentas y activar la programación. Consulta [activación, privacidad y límites](platform/docs/mobile-and-reading.md). La lectura OCR no certifica autenticidad ni cumplimiento legal completo.
+Los transportistas pueden registrar y confirmar su teléfono y autorizar avisos por SMS de cargas compatibles y vencimientos. La integración con Twilio requiere configurar credenciales y programación de envíos. Consulta [activación y privacidad de SMS](platform/docs/mobile-and-reading.md).
