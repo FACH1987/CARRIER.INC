@@ -12,7 +12,7 @@ function dumpSchema() {
 
 test('prepared PostgreSQL schema covers current D1 tables, references and privacy', () => {
   const sql = schemaSql();
-  assert.equal(sql, readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  assert.equal(sql, readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8').replaceAll('\r\n', '\n'));
   for (const table of tableOrder) {
     assert(sql.includes(`CREATE TABLE public."${table}"`));
     assert(sql.includes(`ALTER TABLE public."${table}" ENABLE ROW LEVEL SECURITY;`));
