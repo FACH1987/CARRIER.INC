@@ -4,6 +4,9 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { Miniflare } from 'miniflare';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { dayInNicaragua, addYears } from '../lib/document-rules.ts';
+const testDay = dayInNicaragua();
+const afterDays = days => new Date(Date.parse(testDay + 'T00:00:00Z') + days * 86400000).toISOString().slice(0, 10);
 
 // In-memory Worker + D1 only: this suite cannot contact a production server.
 const base = 'https://rutacarga.test';
@@ -271,26 +274,55 @@ test('local accounts, private carrier documents, verified dispatch and commissio
         return { status: result.status, data: await result.json() };
       };
       let dossier = await (await api('/api/carrier', { cookie: carrierSession })).json();
-      const metadata = { entityType: 'driver', entityId: driverId, type: 'license', issuedAt: '2026-01-01', expiresAt: '2100-12-31' };
+      const metadata = { entityType: 'driver', entityId: driverId, type: 'license', issuedAt: testDay, expiresAt: addYears(testDay, 5) };
       assert.equal((await upload({ ...metadata, expiresAt: '2000-01-01' })).status, 400);
       assert.equal((await upload({ ...metadata, expiresAt: '2100-02-30' })).status, 400);
       assert.equal((await upload(metadata, { content: '<script>bad</script>', mime: 'image/png' })).status, 400);
       assert.equal((await upload(metadata, { origin: 'https://other.example' })).status, 403);
       assert.equal((await upload({ ...metadata, entityId: randomUUID() })).status, 404);
       assert.equal((await upload({ ...metadata, exemption: 'Does not apply to my driver license' })).status, 400);
+      assert.equal((await upload({ ...metadata, expiresAt: addYears(testDay, 6) })).status, 400);
       const slots = [
         ...dossier.profileChecklist.map(item => ({ entityType: 'profile', entityId: carrierAccount.id, type: item.type })),
         ...dossier.drivers[0].checklist.map(item => ({ entityType: 'driver', entityId: driverId, type: item.type })),
         ...dossier.vehicles[0].checklist.map(item => ({ entityType: 'vehicle', entityId: vehicleId, type: item.type }))
       ];
-      for (const slot of slots.slice(0, -1)) assert.equal((await upload({ ...metadata, ...slot })).status, 201);
+      const slotMetadata = slot => ({ ...metadata, ...slot, expiresAt: addYears(testDay, slot.type === 'emissions' ? 1 : 5) });
+      for (const slot of slots.slice(0, -1)) assert.equal((await upload(slotMetadata(slot))).status, 201);
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
-      assert.equal((await upload({ ...metadata, ...slots.at(-1) })).status, 201);
+      assert.equal((await upload(slotMetadata(slots.at(-1)))).status, 201);
       // The final current document enables access without any administrator review.
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
       const automatic = await (await api('/api/carrier', { cookie: carrierSession })).json();
       assert.equal(automatic.ready, true);
       assert(automatic.drivers[0].checklist.every(item => item.document.reviewedAt === null));
+      assert.equal((await api('/api/carrier/notifications')).status, 401);
+      assert.equal((await api('/api/carrier/notifications', { cookie })).status, 403);
+      assert.equal((await upload({ ...metadata, expiresAt: afterDays(10) })).status, 201);
+      let notices = await (await api('/api/carrier/notifications', { cookie: carrierSession })).json();
+      assert.equal(notices.alerts.length, 1);
+      assert.equal(notices.alerts[0].stage, '15');
+      assert.equal(notices.unread, 1);
+      const readId = notices.alerts[0].id;
+      assert(!JSON.stringify(notices).includes('objectKey'));
+      assert.equal((await api('/api/carrier/notifications', { method: 'POST', cookie: carrierSession, body: { ids: [readId] }, headers: { Origin: 'https://other.example' } })).status, 403);
+      assert.equal((await api('/api/carrier/notifications', { method: 'POST', cookie: carrierSession, body: { ids: ['a'.repeat(64)] } })).status, 409);
+      assert.equal((await api('/api/carrier/notifications', { method: 'POST', cookie: carrierSession, body: { ids: [readId] } })).status, 200);
+      notices = await (await api('/api/carrier/notifications', { cookie: carrierSession })).json();
+      assert.equal(notices.unread, 0);
+      assert.equal(notices.alerts.length, 1);
+      await db.prepare("update carrier_documents set issued_at = ?, expires_at = ? where user_id = ? and entity_type = 'driver' and type = 'license'").bind(afterDays(-365), afterDays(-1), carrierAccount.id).run();
+      notices = await (await api('/api/carrier/notifications', { cookie: carrierSession })).json();
+      assert.equal(notices.alerts[0].stage, 'expired');
+      assert.equal(notices.unread, 1);
+      assert.equal(notices.accessAllowed, false);
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
+      assert.equal((await api('/api/loads?mine=1', { cookie: carrierSession })).status, 200);
+      // Renewal restores access and removes the obsolete warning without admin approval.
+      assert.equal((await upload(metadata)).status, 201);
+      assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
+      notices = await (await api('/api/carrier/notifications', { cookie: carrierSession })).json();
+      assert.equal(notices.alerts.length, 0);
       dossier = await (await api('/api/carrier?userId=' + carrierAccount.id, { cookie: adminCookie })).json();
       const docs = [...dossier.profileChecklist, ...dossier.drivers[0].checklist, ...dossier.vehicles[0].checklist].map(item => item.document);
       const privateUrl = '/api/carrier/documents/' + docs[0].id;
@@ -321,8 +353,8 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2000-01-01', newLicense.id).run();
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
       assert.equal((await review(newLicense)).status, 409);
-      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2100-12-31', newLicense.id).run();
-      const freight = { origin: 'Managua', destination: 'Leon', pickupDate: '2099-12-01', equipment: 'Refrigerado', weight: 1000, pay: 100.05, company: 'Commission test', email };
+      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(metadata.expiresAt, newLicense.id).run();
+      const freight = { origin: 'Managua', destination: 'Leon', pickupDate: afterDays(7), equipment: 'Refrigerado', weight: 1000, pay: 100.05, company: 'Commission test', email };
       assert.equal((await api('/api/loads', { method: 'POST', cookie, body: freight })).status, 400);
       const posted = await api('/api/loads', { method: 'POST', cookie, body: { ...freight, acceptCommission: true, feeCents: 1 } });
       assert.equal(posted.status, 201);
@@ -334,11 +366,11 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const options = await act('options', cookie, { carrierEmail: carrierAccount.email });
       assert.equal(options.status, 200);
       assert.deepEqual((await options.json()).vehicles.map(v => v.id), [vehicleId]);
-      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2027-01-01', newLicense.id).run();
+      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(afterDays(2), newLicense.id).run();
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
       assert.deepEqual((await (await act('options', cookie, { carrierEmail: carrierAccount.email })).json()).vehicles, []);
       assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email, acceptCommission: true })).status, 403);
-      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind('2100-12-31', newLicense.id).run();
+      await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(metadata.expiresAt, newLicense.id).run();
       assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email, acceptCommission: true, vehicleId: (await secondVehicle.json()).id })).status, 403);
       assert.equal((await act('complete')).status, 409);
       assert.equal((await act('assign', carrierSession, { carrierEmail: carrierAccount.email, acceptCommission: true })).status, 403);

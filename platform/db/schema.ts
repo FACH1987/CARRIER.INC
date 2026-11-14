@@ -37,6 +37,12 @@ export const carrierDocuments = sqliteTable('carrier_documents', {
   revision: text('revision').notNull(), uploadedAt: text('uploaded_at').notNull(),
   reviewedAt: text('reviewed_at'), reviewedBy: text('reviewed_by'), reviewNote: text('review_note')
 }, t => [index('carrier_documents_user_idx').on(t.userId), uniqueIndex('carrier_documents_slot_idx').on(t.userId, t.entityType, t.entityId, t.type)]);
+export const carrierNoticeReads = sqliteTable('carrier_notice_reads', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  documentId: text('document_id').notNull().references(() => carrierDocuments.id, { onDelete: 'cascade' }),
+  readAt: text('read_at').notNull()
+}, t => [index('carrier_notice_reads_user_idx').on(t.userId)]);
 export const loads = sqliteTable('loads', {
   id: text('id').primaryKey(),
   ownerId: text('owner_id').notNull(),

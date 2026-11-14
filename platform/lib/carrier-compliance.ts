@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { carrierProfiles, carrierDrivers, carrierVehicles, carrierDocuments } from '../db/schema';
 import { AuthError } from './account-auth';
+import { dayInNicaragua, evaluateDocument, vehicleCategoryError, RULESET, legalSources } from './document-rules';
+export { validDate } from './document-rules';
 
 export const categories = ['3', '4A', '5A', '6A', '7'] as const;
 export const requirements = {
@@ -18,10 +20,9 @@ export const documentLabels: Record<string, string> = {
 // Applicable-document declarations are submitted by the operator; review is optional.
 export const exemptable = ['ruc', 'company_registration', 'operation', 'weights', 'special_permit'];
 export const timeless = ['identity', 'circulation', 'ruc', 'company_registration'];
-export function todayNI() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Managua', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
-export function validDate(value: string) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value + 'T12:00:00Z')) && new Date(value + 'T12:00:00Z').toISOString().slice(0, 10) === value; }
+export const todayNI = dayInNicaragua;
 export function documentIsValid(doc: typeof carrierDocuments.$inferSelect | undefined, day: string) {
-  return Boolean(doc && doc.status !== 'rejected' && (doc.exemption || (doc.objectKey && doc.size && doc.issuedAt && doc.issuedAt <= day && (doc.noExpiry || (doc.expiresAt && doc.expiresAt >= day)))));
+  return evaluateDocument(doc, day).valid;
 }
 export async function carrierDossier(userId: string, day = todayNI()) {
   const db = getDb();
@@ -33,7 +34,7 @@ export async function carrierDossier(userId: string, day = todayNI()) {
   ]);
   const checked = (entityType: 'profile' | 'driver' | 'vehicle', entityId: string, types: readonly string[]) => types.map(type => {
     const doc = documents.find(item => item.entityType === entityType && item.entityId === entityId && item.type === type);
-    return { type, label: documentLabels[type], valid: documentIsValid(doc, day), document: doc ? { ...doc, objectKey: undefined, userId: undefined } : null };
+    return { type, label: documentLabels[type], ...evaluateDocument(doc, day), document: doc ? { ...doc, objectKey: undefined, userId: undefined } : null };
   });
   const profileChecklist = profile ? checked('profile', userId, profile.kind === 'flota' ? requirements.profile : ['identity']) : [];
   const profileReady = Boolean(profile && profileChecklist.every(item => item.valid));
@@ -43,10 +44,11 @@ export async function carrierDossier(userId: string, day = todayNI()) {
   });
   const vehicleRows = vehicles.map(vehicle => {
     const driver = driverRows.find(row => row.id === vehicle.driverId);
+    const categoryError = vehicleCategoryError(vehicle.requiredCategory, driver?.categories || [], vehicle.capacityKg, vehicle.equipment);
     const checklist = checked('vehicle', vehicle.id, [...requirements.vehicle, ...(vehicle.requiredCategory === '7' ? ['special_permit'] : [])]);
-    return { ...vehicle, driverName: driver?.name, checklist, ready: profileReady && Boolean(driver?.ready && driver.categories.includes(vehicle.requiredCategory)) && checklist.every(item => item.valid) };
+    return { ...vehicle, driverName: driver?.name, categoryError, checklist, ready: profileReady && Boolean(driver?.ready) && !categoryError && checklist.every(item => item.valid) };
   });
-  return { profile: profile || null, profileChecklist, drivers: driverRows, vehicles: vehicleRows, ready: profileReady && vehicleRows.some(row => row.ready), day, documentLabels, exemptable, timeless };
+  return { profile: profile || null, profileChecklist, drivers: driverRows, vehicles: vehicleRows, ready: profileReady && vehicleRows.some(row => row.ready), day, documentLabels, exemptable, timeless, evaluation: { ruleset: RULESET, sources: legalSources, scope: 'Comprobación automática de presencia, fechas declaradas y compatibilidad básica de categorías. No incluye lectura del contenido de los archivos ni autenticación ante autoridades.' } };
 }
 export async function requireCarrierReady(userId: string, vehicleId?: string, day = todayNI()) {
   const dossier = await carrierDossier(userId, day < todayNI() ? todayNI() : day);

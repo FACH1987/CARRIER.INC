@@ -28,6 +28,7 @@ let authBusy = false;
 const authDialog = document.querySelector('#auth-dialog');
 const authForm = document.querySelector('#auth-form');
 function setAccount(user) {
+  const changed = currentUser?.id !== user?.id || currentUser?.role !== user?.role;
   currentUser = user;
   signedIn = Boolean(user);
   document.querySelector('#admin-open').hidden = !user?.isAdmin;
@@ -51,6 +52,7 @@ function setAccount(user) {
   label.hidden = !signedIn;
   label.title = user?.isAdmin ? 'Administrador: ' + user.email : '';
   label.textContent = user ? user.name + (user.isAdmin ? ' · Administrador' : user.role === 'transportista' ? ' · Transportista' : ' · Empresa') : '';
+  if (changed) document.dispatchEvent(new CustomEvent('rutacarga:account', { detail: user }));
 }
 function setAuthMode(mode) {
   if (authBusy) return;

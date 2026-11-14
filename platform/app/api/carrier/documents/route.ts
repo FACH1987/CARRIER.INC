@@ -4,6 +4,7 @@ import { carrierProfiles, carrierDrivers, carrierVehicles, carrierDocuments } fr
 import { AuthError, authFailure, currentAccount, requireSameOrigin, responseJson, checkAuthLimit } from '../../../../lib/account-auth';
 import { requirements, exemptable, timeless, todayNI, validDate } from '../../../../lib/carrier-compliance';
 import { documentBucket, limitedBody } from '../../../../lib/document-storage';
+import { documentDateError } from '../../../../lib/document-rules';
 export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
@@ -28,6 +29,8 @@ export async function POST(request: Request) {
       if (!issuedAt || !validDate(issuedAt) || issuedAt > todayNI()) throw new AuthError('La emisión debe ser una fecha válida, no futura.');
       if (noExpiry && !timeless.includes(type)) throw new AuthError('Este documento requiere vencimiento.');
       if (!noExpiry && (!expiresAt || !validDate(expiresAt) || expiresAt < todayNI() || expiresAt < issuedAt)) throw new AuthError('El documento debe estar vigente y vencer después de su emisión.');
+      const dateError = documentDateError(type, issuedAt, expiresAt, noExpiry, todayNI());
+      if (dateError) throw new AuthError(dateError);
     }
     const bytes = await limitedBody(request, 5 * 1024 * 1024);
     const mime = request.headers.get('content-type')?.split(';')[0];

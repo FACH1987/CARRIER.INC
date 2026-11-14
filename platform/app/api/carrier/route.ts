@@ -4,6 +4,7 @@ import { getDb } from '../../../db';
 import { users, carrierProfiles, carrierDrivers, carrierVehicles } from '../../../db/schema';
 import { currentAccount, readAuthJson, responseJson, authFailure, AuthError } from '../../../lib/account-auth';
 import { carrierDossier, categories } from '../../../lib/carrier-compliance';
+import { vehicleCategoryError } from '../../../lib/document-rules';
 export const dynamic = 'force-dynamic';
 const name = z.string().trim().min(2).max(120);
 const schema = z.discriminatedUnion('action', [
@@ -43,6 +44,8 @@ export async function POST(request: Request) {
       } else {
         const [driver] = await db.select().from(carrierDrivers).where(and(eq(carrierDrivers.id, data.driverId), eq(carrierDrivers.userId, account.id)));
         if (!driver || !JSON.parse(driver.categories).includes(data.requiredCategory)) throw new AuthError('El conductor debe declarar la categoría requerida por este vehículo.');
+        const categoryError = vehicleCategoryError(data.requiredCategory, JSON.parse(driver.categories), data.capacityKg, data.equipment);
+        if (categoryError) throw new AuthError(categoryError);
         const [total] = await db.select({ n: count() }).from(carrierVehicles).where(eq(carrierVehicles.userId, account.id));
         if (total.n >= (profile.kind === 'independiente' ? 1 : 50)) throw new AuthError('Límite de vehículos alcanzado.', 409);
         const duplicate = await db.select({ id: carrierVehicles.id }).from(carrierVehicles).where(and(eq(carrierVehicles.userId, account.id), eq(carrierVehicles.plate, data.plate)));

@@ -11,8 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=documents-1">
-    <script src="app.js?v=automatic-1" defer></script>
-  </head>
+    <script src="app.js?v=alerts-1" defer></script>
+  <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=1" defer></script></head>
   <body>
     <header class="topbar">
       <a class="brand" href="#" aria-label="RutaCarga. Diseñado por: Gueguense Digital. Inicio">
@@ -23,7 +23,7 @@
         <a class="nav-link active" href="#cargas">Buscar cargas</a>
         <a class="nav-link" href="#como-funciona">Cómo funciona</a>
       </nav>
-      <div class="top-actions"><a id="carrier-open" class="button button-light button-small" href="carrier.html" hidden>Mi expediente</a><a id="commissions-open" class="button button-light button-small" href="commissions.html" hidden>Comisiones</a><a id="admin-open" class="button button-light button-small" href="admin.html" hidden>Usuarios</a><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
+      <div class="top-actions"><div id="document-notices" hidden></div><a id="carrier-open" class="button button-light button-small" href="carrier.html" hidden>Mi expediente</a><a id="commissions-open" class="button button-light button-small" href="commissions.html" hidden>Comisiones</a><a id="admin-open" class="button button-light button-small" href="admin.html" hidden>Usuarios</a><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
         <button class="button button-outline button-small" id="open-post-top" type="button">Publicar carga <span aria-hidden="true">↗</span></button>
       </div>
     </header>
@@ -92,7 +92,7 @@
           <div class="board-meta" id="board-meta" hidden><span class="live-dot"></span><strong id="load-count">0</strong> <span id="load-count-label">cargas disponibles</span></div>
         </div>
 
-        <div id="carrier-notice" class="empty-state" hidden><h3>Completa tu registro de transportista</h3><p>Sube los documentos del operador, conductor y vehículo. Deben estar completos y vigentes para consultar nuevas cargas y recibir viajes.</p><a class="button button-dark" href="carrier.html">Completar mi expediente</a></div><div id="access-gate" class="empty-state access-gate"><h3>Regístrate para ver las cargas</h3><p>¿Eres transportista? Crea tu cuenta para consultar rutas, pagos y contactos. Si ya tienes una cuenta, inicia sesión.</p><button class="button button-dark" id="register-carrier" type="button">Registrarme como transportista</button><button class="button button-light" id="gate-login" type="button">Ya tengo cuenta</button></div>
+        <section id="document-notices-banner" class="document-notices-banner" role="status" hidden></section><div id="carrier-notice" class="empty-state" hidden><h3>Completa tu registro de transportista</h3><p>Sube los documentos del operador, conductor y vehículo. Deben estar completos y vigentes para consultar nuevas cargas y recibir viajes.</p><a class="button button-dark" href="carrier.html">Completar mi expediente</a></div><div id="access-gate" class="empty-state access-gate"><h3>Regístrate para ver las cargas</h3><p>¿Eres transportista? Crea tu cuenta para consultar rutas, pagos y contactos. Si ya tienes una cuenta, inicia sesión.</p><button class="button button-dark" id="register-carrier" type="button">Registrarme como transportista</button><button class="button button-light" id="gate-login" type="button">Ya tengo cuenta</button></div>
         <div id="load-board" hidden>
         <form class="search-panel" id="search-form">
           <label class="search-field">
