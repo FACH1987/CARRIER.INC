@@ -8,6 +8,8 @@ import path from 'node:path';
 // In-memory Worker + D1 only: this suite cannot contact a production server.
 const base = 'https://rutacarga.test';
 let runtime;
+const adminId = '00000000-0000-4000-8000-000000000001';
+const setupToken = 'test-only-setup-token';
 const suffix = randomUUID();
 const email = `test-${suffix}@example.com`;
 const password = `  ${randomBytes(24).toString('base64url')}  `;
@@ -30,7 +32,8 @@ test('local registration, session, cargo ownership, logout and access protection
     ],
     modulesRoot: path.resolve('dist/server'),
     compatibilityDate: '2026-05-15', compatibilityFlags: ['nodejs_compat'],
-    d1Databases: ['DB'], d1Persist: false
+    d1Databases: ['DB'], d1Persist: false,
+    bindings: { ADMIN_ACCOUNT_ID: adminId, ADMIN_SETUP_TOKEN: setupToken, ADMIN_SETUP_EMAIL: email }
   });
   t.after(async () => { await runtime.dispose(); });
   const db = await runtime.getD1Database('DB');
@@ -143,9 +146,11 @@ test('local registration, session, cargo ownership, logout and access protection
       const carrierEmail = 'carrier-' + suffix + '@example.com';
       const invalid = await api('/api/auth/register', { method: 'POST', body: { name: 'Carrier', email: carrierEmail, password, role: 'admin' } });
       assert.equal(invalid.status, 400);
-      const created = await api('/api/auth/register', { method: 'POST', body: { name: 'Carrier', email: carrierEmail, password, role: 'transportista' } });
+      const created = await api('/api/auth/register', { method: 'POST', body: { name: 'Carrier', email: carrierEmail, password, role: 'transportista', isAdmin: true, id: adminId } });
       assert.equal(created.status, 201);
       assert.equal((await created.json()).user.role, 'transportista');
+      assert.equal((await created.json()).user.isAdmin, false);
+      assert.notEqual((await created.json()).user.id, adminId);
       const carrierCookie = cookieFrom(created);
       const active = await api('/api/loads', { cookie: carrierCookie });
       assert.equal(active.status, 200);
@@ -159,6 +164,61 @@ test('local registration, session, cargo ownership, logout and access protection
       const denied = await api('/api/loads', { cookie: carrierCookie });
       assert.equal(denied.status, 401);
       assert(!('loads' in await denied.json()));
+    });
+    await t.test('administrator directory is private, searchable, paginated and never exposes password hashes', async () => {
+      const anonymous = await api('/api/admin/users');
+      assert.equal(anonymous.status, 401);
+      assert(!('users' in await anonymous.json()));
+      const regular = await api('/api/admin/users', { cookie });
+      assert.equal(regular.status, 403);
+      assert(!('users' in await regular.json()));
+      const passwordRow = await db.prepare('select password_hash from users where email = ?').bind(email).first();
+      const adminEmail = 'administrator-' + suffix + '@example.com';
+      await db.prepare('insert into users (id, email, name, role, password_hash, created_at) values (?, ?, ?, ?, ?, ?)')
+        .bind(adminId, adminEmail, '<script>Admin_%</script>', 'empresa', passwordRow.password_hash, new Date().toISOString()).run();
+      const loggedIn = await api('/api/auth/login', { method: 'POST', body: { email: adminEmail, password } });
+      assert.equal(loggedIn.status, 200);
+      assert.equal((await loggedIn.json()).user.isAdmin, true);
+      const adminCookie = cookieFrom(loggedIn);
+      assert.equal((await (await api('/api/auth/session', { cookie: adminCookie })).json()).user.isAdmin, true);
+      const listing = await api('/api/admin/users', { cookie: adminCookie });
+      assert.equal(listing.status, 200);
+      const data = await listing.json();
+      assert(data.users.length >= 4);
+      assert(data.counts.empresas >= 3);
+      assert(data.counts.transportistas >= 1);
+      for (const row of data.users) assert.deepEqual(Object.keys(row).sort(), ['createdAt', 'email', 'id', 'name', 'role']);
+      assert(!JSON.stringify(data).includes(passwordRow.password_hash));
+      const carriers = await (await api('/api/admin/users?role=transportista', { cookie: adminCookie })).json();
+      assert(carriers.users.length > 0 && carriers.users.every(row => row.role === 'transportista'));
+      const found = await (await api('/api/admin/users?q=' + encodeURIComponent(adminEmail), { cookie: adminCookie })).json();
+      assert.equal(found.total, 1);
+      const escaped = await (await api('/api/admin/users?q=' + encodeURIComponent('_%'), { cookie: adminCookie })).json();
+      assert.equal(escaped.total, 1);
+      assert.equal(escaped.users[0].id, adminId);
+      const injected = await (await api('/api/admin/users?q=' + encodeURIComponent("' OR 1=1--"), { cookie: adminCookie })).json();
+      assert.equal(injected.total, 0);
+      assert.equal((await api('/api/admin/users?role=admin', { cookie: adminCookie })).status, 400);
+      await db.batch(Array.from({ length: 30 }, (_, i) => db.prepare('insert into users (id, email, name, role, password_hash, created_at) values (?, ?, ?, ?, ?, ?)')
+        .bind(randomUUID(), 'page-' + i + '-' + suffix + '@example.com', 'Pagination ' + i, i % 2 ? 'empresa' : 'transportista', passwordRow.password_hash, new Date().toISOString())));
+      const first = await (await api('/api/admin/users?page=1', { cookie: adminCookie })).json();
+      const second = await (await api('/api/admin/users?page=2', { cookie: adminCookie })).json();
+      assert.equal(first.users.length, 25);
+      assert(second.users.length > 0);
+      assert.equal(new Set([...first.users, ...second.users].map(row => row.id)).size, first.total);
+      await api('/api/auth/logout', { method: 'POST', cookie: adminCookie, body: {} });
+      assert.equal((await api('/api/admin/users', { cookie: adminCookie })).status, 401);
+    });
+    await t.test('temporary owner lookup requires its secret and only looks up the configured account', async () => {
+      assert.equal((await api('/api/admin/setup-lookup')).status, 404);
+      assert.equal((await api('/api/admin/setup-lookup', { headers: { Authorization: 'Bearer incorrect' } })).status, 404);
+      const result = await api('/api/admin/setup-lookup?email=other@example.com', { headers: { Authorization: 'Bearer ' + setupToken } });
+      assert.equal(result.status, 200);
+      const body = await result.json();
+      const expected = await db.prepare('select id from users where email = ?').bind(email).first();
+      assert.equal(body.userId, expected.id);
+      assert.equal(body.found, true);
+      assert.deepEqual(Object.keys(body).sort(), ['found', 'userId']);
     });
     await t.test('expires sessions and invalidates them on logout', async () => {
       await db.prepare('update sessions set expires_at = 0 where token_hash = ?').bind(tokenHash(cookie)).run();

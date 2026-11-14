@@ -29,6 +29,7 @@ const authForm = document.querySelector('#auth-form');
 function setAccount(user) {
   currentUser = user;
   signedIn = Boolean(user);
+  document.querySelector('#admin-open').hidden = !user?.isAdmin;
   document.querySelector('#access-gate').hidden = signedIn;
   document.querySelector('#load-board').hidden = !signedIn;
   document.querySelector('#board-meta').hidden = !signedIn;

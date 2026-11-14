@@ -2,8 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, gt, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { authLimits, sessions, users } from '../db/schema';
+import { withAdminAccess } from './admin-policy';
 
-export type Account = { id: string; name: string; email: string; role: 'empresa' | 'transportista' };
+export type Account = { id: string; name: string; email: string; role: 'empresa' | 'transportista'; isAdmin: boolean };
 export class AuthError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
@@ -34,7 +35,7 @@ export async function currentAccount(request: Request): Promise<Account | null> 
   const [account] = await getDb().select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(and(eq(sessions.tokenHash, digest(token)), gt(sessions.expiresAt, Date.now()))).limit(1);
-  return account || null;
+  return account ? withAdminAccess(account) : null;
 }
 export function requireSameOrigin(request: Request) {
   if (request.headers.get('origin') !== new URL(request.url).origin) throw new AuthError('Solicitud no válida. Recarga la página e intenta de nuevo.', 403);

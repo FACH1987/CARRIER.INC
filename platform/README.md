@@ -23,3 +23,5 @@ Las cuentas propias se documentan en `docs/accounts.md`. Para probarlas, compila
 Gestión de publicaciones: inicia sesión y usa **Mis cargas** para ver todas tus cargas, incluidas las vencidas. El botón **Eliminar** pide confirmación y borra definitivamente solo una carga de la cuenta autenticada.
 
 El registro permite elegir Empresa o Transportista. La API no entrega cargas ni contactos a visitantes sin sesión. Las cuentas anteriores conservan su acceso y se clasifican como Empresa por defecto.
+
+Administración: la cuenta autorizada dispone del botón **Usuarios**, con búsqueda, filtros por tipo y fecha de registro. El acceso se vincula al identificador de la cuenta en el servidor; no se muestran contraseñas. Véase `platform/docs/admin.md` (desde la raíz).

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDb } from '../db';
 import { users } from '../db/schema';
 import { hashPassword, verifyPassword } from './passwords';
+import { withAdminAccess } from './admin-policy';
 import { AuthError, authFailure, checkAuthLimit, readAuthJson, responseJson, startSession } from './account-auth';
 
 const emailSchema = z.string().trim().email().max(120).transform(value => value.toLowerCase());
@@ -22,7 +23,7 @@ export async function register(request: Request) {
     if (existing) throw new AuthError('No se pudo crear la cuenta con ese correo. Si ya tienes una cuenta, inicia sesión.', 409);
     const account = { id: crypto.randomUUID(), name: data.name, email: data.email, role: data.role };
     await db.insert(users).values({ ...account, passwordHash: await hashPassword(data.password), createdAt: new Date().toISOString() });
-    return responseJson({ user: account }, 201, await startSession(request, account.id));
+    return responseJson({ user: withAdminAccess(account) }, 201, await startSession(request, account.id));
   } catch (error) { return authFailure(error); }
 }
 
@@ -37,6 +38,6 @@ export async function login(request: Request) {
     const valid = await verifyPassword(parsed.data.password, stored?.passwordHash);
     if (!stored || !valid) throw new AuthError('Correo o contraseña incorrectos.', 401);
     const account = { id: stored.id, name: stored.name, email: stored.email, role: stored.role };
-    return responseJson({ user: account }, 200, await startSession(request, stored.id));
+    return responseJson({ user: withAdminAccess(account) }, 200, await startSession(request, stored.id));
   } catch (error) { return authFailure(error); }
 }
