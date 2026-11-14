@@ -45,7 +45,8 @@ function setAccount(user) {
   document.querySelector('#account-logout').hidden = !signedIn;
   const label = document.querySelector('#account-label');
   label.hidden = !signedIn;
-  label.textContent = user ? user.name + (user.role === 'transportista' ? ' · Transportista' : ' · Empresa') : '';
+  label.title = user?.isAdmin ? 'Administrador: ' + user.email : '';
+  label.textContent = user ? user.name + (user.isAdmin ? ' · Administrador' : user.role === 'transportista' ? ' · Transportista' : ' · Empresa') : '';
 }
 function setAuthMode(mode) {
   if (authBusy) return;

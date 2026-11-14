@@ -2,6 +2,7 @@ import { and, count, desc, eq, or, sql } from 'drizzle-orm';
 import { getDb } from '../../../../db';
 import { users } from '../../../../db/schema';
 import { authFailure, currentAccount, responseJson } from '../../../../lib/account-auth';
+import { withAdminAccess } from '../../../../lib/admin-policy';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
@@ -29,6 +30,6 @@ export async function GET(request: Request) {
     ]);
     const companies = groups.find(group => group.role === 'empresa')?.total || 0;
     const carriers = groups.find(group => group.role === 'transportista')?.total || 0;
-    return responseJson({ users: rows, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, total: companies + carriers } });
+    return responseJson({ users: rows.map(row => ({ ...row, isAdmin: withAdminAccess(row).isAdmin, canDelete: !withAdminAccess(row).isAdmin })), administrator: { email: account.email }, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, total: companies + carriers } });
   } catch (error) { return authFailure(error); }
 }

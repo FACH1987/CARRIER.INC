@@ -25,3 +25,5 @@ Gestión de publicaciones: inicia sesión y usa **Mis cargas** para ver todas tu
 El registro permite elegir Empresa o Transportista. La API no entrega cargas ni contactos a visitantes sin sesión. Las cuentas anteriores conservan su acceso y se clasifican como Empresa por defecto.
 
 Administración: la cuenta autorizada dispone del botón **Usuarios**, con búsqueda, filtros por tipo y fecha de registro. El acceso se vincula al identificador de la cuenta en el servidor; no se muestran contraseñas. Véase `platform/docs/admin.md` (desde la raíz).
+
+El panel identifica el correo del administrador y ofrece **Eliminar** para las demás cuentas. La confirmación informa que el borrado de la cuenta y sus cargas es definitivo.

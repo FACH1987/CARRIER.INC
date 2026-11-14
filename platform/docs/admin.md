@@ -10,4 +10,6 @@ Si se necesita localizar la cuenta, configurar temporalmente `ADMIN_SETUP_EMAIL`
 
 Configurar `ADMIN_ACCOUNT_ID` con el identificador confirmado, retirar ambos secretos temporales y volver a desplegar la misma versión. Sin los secretos el endpoint de configuración responde 404. No guardar credenciales en el código ni registrar cabeceras de autenticación.
 
-El panel es de consulta: no permite cambiar permisos, contraseñas ni borrar cuentas.
+El panel permite consultar y eliminar usuarios con confirmación. La eliminación borra la cuenta, sus sesiones y sus cargas de forma transaccional. La cuenta administradora está protegida contra su propia eliminación. No permite cambiar permisos ni contraseñas.
+
+El panel identifica el correo del administrador y ofrece **Eliminar** para las demás cuentas. La confirmación informa que el borrado de la cuenta y sus cargas es definitivo.

@@ -7,8 +7,8 @@
     <title>Usuarios registrados · RutaCarga</title>
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=admin-1">
-    <link rel="stylesheet" href="admin.css?v=1">
-    <script src="admin.js?v=1" defer></script>
+    <link rel="stylesheet" href="admin.css?v=2">
+    <script src="admin.js?v=2" defer></script>
   </head>
   <body>
     <header class="topbar"><a class="brand" href="market.html"><img class="brand-mark brand-logo" src="brand-emblem.png" alt="Logo de Gueguense Digital" width="50" height="44"><span class="brand-wordmark">Ruta<span class="brand-accent">Carga</span><small>Diseñado por: Gueguense Digital</small></span></a><a class="button button-outline button-small" href="market.html">Volver a las cargas</a></header>
@@ -16,10 +16,10 @@
       <div class="admin-heading"><div><div class="eyebrow">ADMINISTRACIÓN</div><h1>Usuarios registrados</h1><p>Consulta las empresas y transportistas que forman parte de RutaCarga.</p></div></div>
       <p id="admin-status" role="status" aria-live="polite">Verificando tu acceso…</p>
       <section id="admin-denied" class="empty-state" hidden><h2>Acceso exclusivo del administrador</h2><p>Inicia sesión en RutaCarga con la cuenta autorizada para consultar este panel.</p><a class="button button-dark" href="market.html">Ir a iniciar sesión</a></section>
-      <section id="admin-content" hidden aria-label="Directorio de usuarios">
+      <section id="admin-content" hidden aria-label="Directorio de usuarios"><p id="admin-identity" class="admin-identity"></p>
         <div class="admin-metrics"><article><span>Total de cuentas</span><strong id="users-total">0</strong></article><article><span>Empresas</span><strong id="users-companies">0</strong></article><article><span>Transportistas</span><strong id="users-carriers">0</strong></article></div>
         <form id="admin-search" class="admin-search"><label class="form-field"><span>Buscar por nombre o correo</span><input id="user-search" type="search" maxlength="120" placeholder="Nombre o correo electrónico"></label><label class="form-field"><span>Tipo de cuenta</span><select id="user-role"><option value="">Todos</option><option value="empresa">Empresas</option><option value="transportista">Transportistas</option></select></label><button class="button button-dark" type="submit">Buscar</button><button id="users-refresh" class="button button-light" type="button">Actualizar</button></form>
-        <div class="admin-table-wrapper"><table><caption class="sr-only">Nombre, correo, tipo y fecha de registro de las cuentas</caption><thead><tr><th scope="col">Nombre</th><th scope="col">Correo electrónico</th><th scope="col">Tipo de cuenta</th><th scope="col">Fecha de registro</th></tr></thead><tbody id="users-list"></tbody></table></div>
+        <div class="admin-table-wrapper"><table><caption class="sr-only">Nombre, correo, tipo y fecha de registro de las cuentas</caption><thead><tr><th scope="col">Nombre</th><th scope="col">Correo electrónico</th><th scope="col">Tipo de cuenta</th><th scope="col">Fecha de registro</th><th scope="col">Acciones</th></tr></thead><tbody id="users-list"></tbody></table></div>
         <p id="users-empty" class="admin-empty" hidden>No hay usuarios que coincidan con esta búsqueda.</p>
         <nav class="admin-pagination" aria-label="Páginas de usuarios"><span id="users-page"></span><div><button id="users-prev" class="button button-light button-small" type="button" disabled>Anterior</button><button id="users-next" class="button button-light button-small" type="button" disabled>Siguiente</button></div></nav>
       </section>
