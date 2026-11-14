@@ -39,6 +39,7 @@ test('local registration, session, cargo ownership, logout and access protection
     await db.batch(statements.map(statement => db.prepare(statement)));
   }
   let cookie;
+  let publishedId;
   {
     await t.test('rejects short passwords and cross-origin registration', async () => {
       assert.equal((await api('/api/auth/register', { method: 'POST', body: { name: 'Test', email, password: 'short' } })).status, 400);
@@ -90,6 +91,8 @@ test('local registration, session, cargo ownership, logout and access protection
       const response = await api('/api/loads', { method: 'POST', body: cargo, cookie });
       assert.equal(response.status, 201);
       const { load } = await response.json();
+      publishedId = load.id;
+      assert.equal(load.canDelete, true);
       const stored = await db.prepare('select owner_id from loads where id = ?').bind(load.id).first();
       const account = await db.prepare('select id from users where email = ?').bind(email).first();
       assert.equal(stored.owner_id, `account:${account.id}`);
@@ -97,7 +100,40 @@ test('local registration, session, cargo ownership, logout and access protection
       assert(listing.loads.some(row => row.id === load.id));
       assert.equal(listing.user, null);
       assert(!('ownerId' in listing.loads.find(row => row.id === load.id)));
+      assert.equal(listing.loads.find(row => row.id === load.id).canDelete, false);
       assert.equal((await api('/api/loads', { method: 'POST', cookie, body: cargo, headers: { Origin: 'https://other.example' } })).status, 403);
+    });
+    await t.test('only the owner can delete cargo, including expired own cargo', async () => {
+      assert.equal((await api('/api/loads?mine=1')).status, 401);
+      const mine = await (await api('/api/loads?mine=1', { cookie })).json();
+      assert.equal(mine.loads.find(row => row.id === publishedId).canDelete, true);
+      assert(mine.loads.every(row => !('ownerId' in row)));
+      const otherEmail = `other-${suffix}@example.com`;
+      const other = await api('/api/auth/register', { method: 'POST', body: { name: 'Other local account', email: otherEmail, password } });
+      assert.equal(other.status, 201);
+      const otherCookie = cookieFrom(other);
+      const otherListing = await (await api('/api/loads', { cookie: otherCookie })).json();
+      assert.equal(otherListing.loads.find(row => row.id === publishedId).canDelete, false);
+      const otherMine = await (await api('/api/loads?mine=1', { cookie: otherCookie })).json();
+      assert(!otherMine.loads.some(row => row.id === publishedId));
+      const endpoint = '/api/loads/' + publishedId;
+      assert.equal((await api(endpoint, { method: 'DELETE' })).status, 401);
+      assert.equal((await api(endpoint, { method: 'DELETE', cookie: otherCookie })).status, 404);
+      assert.equal((await api(endpoint, { method: 'DELETE', cookie, headers: { Origin: 'https://other.example' } })).status, 403);
+      assert(await db.prepare('select id from loads where id = ?').bind(publishedId).first());
+      const deleted = await api(endpoint, { method: 'DELETE', cookie });
+      assert.equal(deleted.status, 200);
+      assert.equal((await deleted.json()).deleted, true);
+      assert.equal(await db.prepare('select id from loads where id = ?').bind(publishedId).first(), null);
+      assert.equal((await api(endpoint, { method: 'DELETE', cookie })).status, 404);
+      assert(!(await (await api('/api/loads')).json()).loads.some(row => row.id === publishedId));
+      const oldId = randomUUID();
+      const owner = await db.prepare('select id from users where email = ?').bind(email).first();
+      await db.prepare('insert into loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, company, email, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(oldId, `account:${owner.id}`, 'Managua', 'León', '2000-01-01', 'Refrigerado', 1000, 5000, 'Expired local test', email, new Date().toISOString()).run();
+      assert(!(await (await api('/api/loads')).json()).loads.some(row => row.id === oldId));
+      assert((await (await api('/api/loads?mine=1', { cookie })).json()).loads.some(row => row.id === oldId && row.canDelete));
+      assert.equal((await api('/api/loads/' + oldId, { method: 'DELETE', cookie })).status, 200);
     });
     await t.test('expires sessions and invalidates them on logout', async () => {
       await db.prepare('update sessions set expires_at = 0 where token_hash = ?').bind(tokenHash(cookie)).run();

@@ -17,4 +17,4 @@ create index loads_owner_created_idx on public.loads (owner_id, created_at);
 alter table public.loads enable row level security;
 -- Only the server's secret key can access this table. No browser access.
 revoke all on public.loads from anon, authenticated;
-grant select, insert on public.loads to service_role;
+grant select, insert, delete on public.loads to service_role;

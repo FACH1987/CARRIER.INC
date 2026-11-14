@@ -19,9 +19,16 @@ async function request(path: string, init: RequestInit = {}) {
   return response;
 }
 
-export async function listSupabaseLoads(today: string): Promise<Load[]> {
-  const query = new URLSearchParams({ select: 'id,origin,destination,pickupDate:pickup_date,equipment,weight,pay,company,email,createdAt:created_at', pickup_date: 'gte.' + today, order: 'created_at.desc', limit: '500' });
+export async function listSupabaseLoads(today: string, ownerId?: string): Promise<(Load & { ownerId: string })[]> {
+  const query = new URLSearchParams({ select: 'id,ownerId:owner_id,origin,destination,pickupDate:pickup_date,equipment,weight,pay,company,email,createdAt:created_at', order: 'created_at.desc', limit: '500' });
+  if (ownerId) query.set('owner_id', 'eq.' + ownerId);
+  else query.set('pickup_date', 'gte.' + today);
   return (await request('loads?' + query)).json();
+}
+
+export async function deleteSupabaseLoad(id: string, ownerId: string): Promise<{ id: string }[]> {
+  const query = new URLSearchParams({ id: 'eq.' + id, owner_id: 'eq.' + ownerId, select: 'id' });
+  return (await request('loads?' + query, { method: 'DELETE', headers: { Prefer: 'return=representation' } })).json();
 }
 
 export async function countSupabaseLoads(ownerId: string, since: string): Promise<number> {

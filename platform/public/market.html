@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
-    <link rel="stylesheet" href="styles.css?v=accounts-1">
-    <script src="app.js?v=accounts-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=delete-loads-1">
+    <script src="app.js?v=delete-loads-1" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -89,7 +89,7 @@
             <p class="section-description">Encuentra cargas en Nicaragua por municipio o departamento y tipo de equipo.</p>
             <p class="board-notice">Publicaciones compartidas entre empresas y transportistas. Confirma disponibilidad y condiciones directamente con el anunciante.</p>
           </div>
-          <div class="board-meta"><span class="live-dot"></span><strong id="load-count">0</strong> cargas disponibles</div>
+          <div class="board-meta"><span class="live-dot"></span><strong id="load-count">0</strong> <span id="load-count-label">cargas disponibles</span></div>
         </div>
 
         <form class="search-panel" id="search-form">
@@ -120,7 +120,7 @@
 
         <div class="results-toolbar">
           <div class="results-label"><span class="results-dot"></span> CARGAS VIGENTES</div>
-          <div class="results-controls">
+          <div class="results-controls"><button id="my-loads" class="text-button" type="button" aria-pressed="false" hidden>Mis cargas</button>
             <button class="text-button" type="button" id="clear-filters">Limpiar filtros</button>
             <label class="sort-label" for="sort-select">Ordenar:</label>
             <select class="sort-select" id="sort-select"><option value="newest">Más recientes</option><option value="pay-desc">Mayor pago</option><option value="pay-asc">Menor pago</option></select>

@@ -22,3 +22,5 @@ El proyecto de Sites y la conexión D1 se declaran en `platform/.openai/hosting.
 Se mantiene Cloudflare D1 como base de datos activa. Supabase queda como una opción futura; su preparación está en platform/supabase/README.md. No activar la migración ni configurar una suscripción para ella hasta que el usuario decida retomarla.
 
 Identidad visual: RutaCarga por Güegüense Digital, con azul marino, azul eléctrico y celeste.
+
+Gestión de publicaciones: inicia sesión y usa **Mis cargas** para ver todas tus cargas, incluidas las vencidas. El botón **Eliminar** pide confirmación y borra definitivamente solo una carga de la cuenta autenticada.

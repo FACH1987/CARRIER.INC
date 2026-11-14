@@ -15,6 +15,9 @@ let toastTimer;
 
 let loads = [];
 let signedIn = false;
+let mineOnly = false;
+const deletingLoads = new Set();
+const removedLoadIds = new Set();
 let sessionKnown = false;
 let refreshing = null;
 let currentUser = null;
@@ -26,6 +29,13 @@ const authForm = document.querySelector('#auth-form');
 function setAccount(user) {
   currentUser = user;
   signedIn = Boolean(user);
+  document.querySelector('#my-loads').hidden = !signedIn;
+  if (!signedIn) {
+    if (mineOnly) loads = [];
+    mineOnly = false;
+    document.querySelector('#my-loads').setAttribute('aria-pressed', 'false');
+    loads = loads.map(load => ({ ...load, canDelete: false }));
+  }
   document.querySelector('#sign-in').hidden = signedIn;
   document.querySelector('#account-login').hidden = signedIn;
   document.querySelector('#account-logout').hidden = !signedIn;
@@ -68,10 +78,14 @@ async function refreshLoads() {
 }
 async function updateLoads() {
   try {
-    const response = await fetch('/api/loads', { cache: 'no-store' });
+    let response = await fetch(mineOnly ? '/api/loads?mine=1' : '/api/loads', { cache: 'no-store' });
+    if (response.status === 401 && mineOnly) {
+      setAccount(null);
+      response = await fetch('/api/loads', { cache: 'no-store' });
+    }
     if (!response.ok) throw new Error('No se pudieron consultar las cargas.');
     const data = await response.json();
-    loads = data.loads;
+    loads = data.loads.filter(load => !removedLoadIds.has(load.id));
     setAccount(data.user || null);
     sessionKnown = true;
     document.querySelector('#sign-in').hidden = signedIn;
@@ -135,14 +149,17 @@ function getVisibleLoads() {
 function renderLoads() {
   const visibleLoads = getVisibleLoads();
   const hasFilters = Boolean(filters.origin.value.trim() || filters.destination.value.trim() || filters.equipment.value);
-  document.querySelector('#empty-title').textContent = hasFilters ? 'No encontramos cargas con esos filtros' : 'Aún no hay cargas publicadas';
+  document.querySelector('#empty-title').textContent = hasFilters ? 'No encontramos cargas con esos filtros' : (mineOnly ? 'No tienes cargas publicadas' : 'Aún no hay cargas publicadas');
   document.querySelector('#empty-description').textContent = hasFilters ? 'Prueba con otro municipio o equipo, o publica tu propio envío.' : 'Publica la primera carga con los datos de tu envío para que los transportistas puedan contactarte.';
   document.querySelector('#empty-clear').hidden = !hasFilters;
   countElement.textContent = String(visibleLoads.length);
+  document.querySelector('#load-count-label').textContent = mineOnly ? 'cargas de tu cuenta' : 'cargas disponibles';
   emptyState.hidden = visibleLoads.length > 0;
   loadList.hidden = visibleLoads.length === 0;
   loadList.innerHTML = visibleLoads.map((load) => {
     const contactControl = `<a class="button contact-button" href="mailto:${escapeHtml(load.email)}?subject=${encodeURIComponent(`Consulta sobre carga: ${load.origin} a ${load.destination}`)}" aria-label="Contactar a ${escapeHtml(load.company)} por correo">Contactar <span aria-hidden="true">↗</span></a>`;
+    const removeControl = load.canDelete === true && signedIn
+      ? `<button type="button" class="delete-load-button" data-delete-load="${escapeHtml(load.id)}" ${deletingLoads.has(load.id) ? 'disabled' : ''}>${deletingLoads.has(load.id) ? 'Eliminando…' : 'Eliminar'}<span class="sr-only"> carga de ${escapeHtml(load.origin)} a ${escapeHtml(load.destination)}</span></button>` : '';
     return `
       <article class="load-card">
         <div class="route-info">
@@ -153,10 +170,50 @@ function renderLoads() {
         <div class="load-detail"><span class="detail-label">EQUIPO</span><span class="equipment-pill">${escapeHtml(load.equipment)}</span></div>
         <div class="load-detail"><span class="detail-label">PESO</span><span class="detail-value">${escapeHtml(formatWeight(load.weight))}</span></div>
         <div class="load-detail pay-detail"><span class="detail-label">PAGO OFRECIDO</span><span class="detail-value pay-value">${escapeHtml(formatCurrency(load.pay))}</span></div>
-        ${contactControl}
+        <div class="load-actions">${contactControl}${removeControl}</div>
       </article>`;
   }).join("");
 }
+
+document.querySelector('#my-loads').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    if (refreshing) await refreshLoads();
+    if (!signedIn) { openAuth(); return; }
+    mineOnly = !mineOnly;
+    button.setAttribute('aria-pressed', String(mineOnly));
+    await refreshLoads();
+  } finally { button.disabled = false; }
+});
+loadList.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-delete-load]');
+  if (!button || !loadList.contains(button)) return;
+  const id = button.dataset.deleteLoad;
+  const load = loads.find(item => item.id === id);
+  if (!load || load.canDelete !== true || !signedIn || deletingLoads.has(id)) return;
+  if (!window.confirm(`¿Eliminar la carga de ${load.origin} a ${load.destination}? Esta acción es definitiva.`)) return;
+  deletingLoads.add(id);
+  renderLoads();
+  try {
+    const response = await fetch('/api/loads/' + encodeURIComponent(id), { method: 'DELETE' });
+    const result = await response.json();
+    if (response.status === 401) {
+      setAccount(null);
+      renderLoads();
+      openAuth();
+      showToast('Inicia sesión de nuevo para eliminar tu carga.');
+      return;
+    }
+    if (!response.ok) throw new Error(result.error || 'No pudimos eliminar la carga.');
+    removedLoadIds.add(id);
+    loads = loads.filter(item => item.id !== id);
+    renderLoads();
+    showToast('Carga eliminada.');
+    await refreshLoads();
+  } catch (error) { showToast(error.message || 'Revisa tu conexión e intenta de nuevo.'); }
+  finally { deletingLoads.delete(id); renderLoads(); }
+});
 
 function showToast(message) {
   toast.textContent = message;
@@ -317,6 +374,7 @@ document.querySelector('#account-logout').addEventListener('click', async (event
     if (!response.ok) throw new Error('No pudimos cerrar la sesión. Intenta de nuevo.');
     setAccount(null);
     sessionKnown = true;
+    renderLoads();
     showToast('Sesión cerrada.');
     refreshLoads();
   } catch (error) { showToast(error.message || 'Revisa tu conexión.'); }

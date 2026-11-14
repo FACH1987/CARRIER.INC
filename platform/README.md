@@ -19,3 +19,5 @@ Web: [RutaCarga Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.si
 Identidad visual: RutaCarga por Güegüense Digital, con azul marino, azul eléctrico y celeste.
 
 Las cuentas propias se documentan en `docs/accounts.md`. Para probarlas, compila con `npm run build` y ejecuta `npm run test:accounts` en un entorno temporal aislado. La verificación y recuperación de correo aún no están configuradas.
+
+Gestión de publicaciones: inicia sesión y usa **Mis cargas** para ver todas tus cargas, incluidas las vencidas. El botón **Eliminar** pide confirmación y borra definitivamente solo una carga de la cuenta autenticada.

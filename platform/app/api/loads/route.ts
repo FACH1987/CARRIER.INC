@@ -26,9 +26,13 @@ const json = (body: unknown, status = 200) => Response.json(body, { status, head
 
 export async function GET(request: Request) {
   try {
-    const data = usesSupabase() ? await listSupabaseLoads(dayInNicaragua()) : await getDb().select({ id: loads.id, origin: loads.origin, destination: loads.destination, pickupDate: loads.pickupDate, equipment: loads.equipment, weight: loads.weight, pay: loads.pay, company: loads.company, email: loads.email, createdAt: loads.createdAt }).from(loads).where(gte(loads.pickupDate, dayInNicaragua())).orderBy(desc(loads.createdAt)).limit(500);
     const user = await currentAccount(request);
-    return json({ loads: data, signedIn: Boolean(user), user });
+    const mine = new URL(request.url).searchParams.get('mine') === '1';
+    if (mine && !user) return json({ error: 'Inicia sesión para ver tus cargas.' }, 401);
+    const owner = user ? `account:${user.id}` : null;
+    const data = usesSupabase() ? await listSupabaseLoads(dayInNicaragua(), mine ? owner! : undefined) : await getDb().select({ id: loads.id, ownerId: loads.ownerId, origin: loads.origin, destination: loads.destination, pickupDate: loads.pickupDate, equipment: loads.equipment, weight: loads.weight, pay: loads.pay, company: loads.company, email: loads.email, createdAt: loads.createdAt }).from(loads).where(mine ? eq(loads.ownerId, owner!) : gte(loads.pickupDate, dayInNicaragua())).orderBy(desc(loads.createdAt)).limit(500);
+    const visible = data.map(({ ownerId, ...load }) => ({ ...load, canDelete: Boolean(owner && ownerId === owner) }));
+    return json({ loads: visible, signedIn: Boolean(user), user });
   } catch (error) {
     console.error('No se pudieron consultar las cargas', error);
     return json({ error: 'No pudimos consultar las cargas. Intenta de nuevo.' }, 503);
@@ -56,7 +60,7 @@ export async function POST(request: Request) {
     const load = { ...parsed.data, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     if (usesSupabase()) await insertSupabaseLoad(load, ownerId);
     else await getDb().insert(loads).values({ ...load, ownerId });
-    return json({ load }, 201);
+    return json({ load: { ...load, canDelete: true } }, 201);
   } catch (error) {
     console.error('No se pudo publicar la carga', error);
     return json({ error: 'No pudimos guardar la carga. Intenta de nuevo.' }, 503);
