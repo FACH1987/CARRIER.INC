@@ -17,4 +17,6 @@ El registro inicia sesión inmediatamente. El correo no se verifica y no constit
 
 Desde `platform/`, ejecuta `npm run build` y después `npm run test:accounts`. No requiere un servidor de desarrollo activo.
 
-Las pruebas de integración ejecutan la compilación en un Worker aislado con D1 temporal en memoria. No usan conexiones de producción ni la base local del usuario. El entorno temporal se elimina al terminar. Comprueban registro, normalización de correo, contraseñas incorrectas, cookies, rotación y caducidad de sesiones, publicación, lectura pública, CSRF, límites de intentos y cierre de sesión.
+Las pruebas de integración ejecutan la compilación en un Worker aislado con D1 temporal en memoria. No usan conexiones de producción ni la base local del usuario. El entorno temporal se elimina al terminar. Comprueban registro, normalización de correo, contraseñas incorrectas, cookies, rotación y caducidad de sesiones, publicación, lectura autenticada, CSRF, límites de intentos y cierre de sesión.
+
+El registro permite elegir Empresa o Transportista. La API no entrega cargas ni contactos a visitantes sin sesión. Las cuentas anteriores conservan su acceso y se clasifican como Empresa por defecto.

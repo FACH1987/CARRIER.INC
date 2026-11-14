@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
-    <link rel="stylesheet" href="styles.css?v=delete-loads-1">
-    <script src="app.js?v=delete-loads-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=carriers-1">
+    <script src="app.js?v=carriers-1" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -89,9 +89,11 @@
             <p class="section-description">Encuentra cargas en Nicaragua por municipio o departamento y tipo de equipo.</p>
             <p class="board-notice">Publicaciones compartidas entre empresas y transportistas. Confirma disponibilidad y condiciones directamente con el anunciante.</p>
           </div>
-          <div class="board-meta"><span class="live-dot"></span><strong id="load-count">0</strong> <span id="load-count-label">cargas disponibles</span></div>
+          <div class="board-meta" id="board-meta" hidden><span class="live-dot"></span><strong id="load-count">0</strong> <span id="load-count-label">cargas disponibles</span></div>
         </div>
 
+        <div id="access-gate" class="empty-state access-gate"><h3>Regístrate para ver las cargas</h3><p>¿Eres transportista? Crea tu cuenta para consultar rutas, pagos y contactos. Si ya tienes una cuenta, inicia sesión.</p><button class="button button-dark" id="register-carrier" type="button">Registrarme como transportista</button><button class="button button-light" id="gate-login" type="button">Ya tengo cuenta</button></div>
+        <div id="load-board" hidden>
         <form class="search-panel" id="search-form">
           <label class="search-field">
             <span class="field-icon" aria-hidden="true">⌖</span>
@@ -134,6 +136,7 @@
           <button class="button button-light" type="button" id="empty-clear">Limpiar búsqueda</button>
           <button class="button button-dark" type="button" id="empty-post">Publicar carga</button>
         </div>
+        </div>
       </section>
 
       <section class="how-section" id="como-funciona">
@@ -168,8 +171,8 @@
           <label class="form-field"><span>Nombre de la empresa</span><input name="company" required maxlength="80" placeholder="Nombre de tu empresa"></label>
           <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="Tu correo de contacto"></label>
         </div>
-        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán públicos. Para publicar necesitas una cuenta de RutaCarga. El contacto abre la aplicación de correo.</p>
-        <label class="form-note"><input name="consent" type="checkbox" required> Acepto publicar estos datos y mi correo para recibir consultas sobre esta carga.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
+        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán visibles para usuarios registrados. Para publicar necesitas una cuenta de RutaCarga. El contacto abre la aplicación de correo.</p>
+        <label class="form-note"><input name="consent" type="checkbox" required> Acepto compartir estos datos y mi correo con usuarios registrados para recibir consultas sobre esta carga.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
       </form>
     </dialog>
 
@@ -177,7 +180,7 @@
       <form class="post-form" id="auth-form">
         <div class="dialog-heading"><div><div class="eyebrow">TU CUENTA DE RUTACARGA</div><h2 id="auth-title">Iniciar sesión</h2><p id="auth-description">Ingresa tu correo y contraseña para continuar.</p></div><button class="close-button" id="auth-close" type="button" aria-label="Cerrar acceso a cuenta">×</button></div>
         <div class="account-modes" aria-label="Tipo de acceso"><button type="button" id="auth-login-mode" aria-pressed="true">Iniciar sesión</button><button type="button" id="auth-register-mode" aria-pressed="false">Crear cuenta</button></div>
-        <div class="account-fields">
+        <div class="account-fields"><label class="form-field" id="auth-role-field" hidden><span>Tipo de cuenta</span><select name="role" disabled><option value="empresa">Empresa</option><option value="transportista">Transportista</option></select></label>
           <label class="form-field" id="auth-name-field" hidden><span>Tu nombre o empresa</span><input name="name" autocomplete="name" minlength="2" maxlength="80" disabled></label>
           <label class="form-field"><span>Correo electrónico</span><input name="email" type="email" autocomplete="username" maxlength="120" required></label>
           <label class="form-field"><span>Contraseña</span><input name="password" type="password" autocomplete="current-password" minlength="1" maxlength="128" required aria-describedby="auth-password-help"></label>

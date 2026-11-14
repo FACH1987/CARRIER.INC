@@ -2,10 +2,10 @@
 
 La aplicación de producción está en `platform/`. Usa una API y Cloudflare D1 para compartir las cargas entre dispositivos. El archivo `index.html` de la raíz abre la web publicada para ingresar y consultar datos reales.
 
-- Consulta pública de cargas vigentes, filtros y actualización cada 30 segundos.
+- Consulta de cargas vigentes solo con sesión iniciada, filtros y actualización cada 30 segundos.
 - Cuentas propias con correo y contraseña para publicar.
 - Datos validados en el servidor y consultas parametrizadas.
-- El correo del anunciante es público, con consentimiento al publicar.
+- El correo del anunciante solo es visible para usuarios con sesión iniciada, con consentimiento al publicar.
 - Hasta 10 publicaciones por usuario cada 24 horas.
 - No se incluyen cargas ni valores de demostración.
 
@@ -24,3 +24,5 @@ Se mantiene Cloudflare D1 como base de datos activa. Supabase queda como una opc
 Identidad visual: RutaCarga por Güegüense Digital, con azul marino, azul eléctrico y celeste.
 
 Gestión de publicaciones: inicia sesión y usa **Mis cargas** para ver todas tus cargas, incluidas las vencidas. El botón **Eliminar** pide confirmación y borra definitivamente solo una carga de la cuenta autenticada.
+
+El registro permite elegir Empresa o Transportista. La API no entrega cargas ni contactos a visitantes sin sesión. Las cuentas anteriores conservan su acceso y se clasifican como Empresa por defecto.

@@ -3,7 +3,7 @@ import { and, eq, gt, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { authLimits, sessions, users } from '../db/schema';
 
-export type Account = { id: string; name: string; email: string };
+export type Account = { id: string; name: string; email: string; role: 'empresa' | 'transportista' };
 export class AuthError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
@@ -31,7 +31,7 @@ export function responseJson(body: unknown, status = 200, cookieValue?: string) 
 export async function currentAccount(request: Request): Promise<Account | null> {
   const token = sessionToken(request);
   if (!token) return null;
-  const [account] = await getDb().select({ id: users.id, name: users.name, email: users.email }).from(sessions)
+  const [account] = await getDb().select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(and(eq(sessions.tokenHash, digest(token)), gt(sessions.expiresAt, Date.now()))).limit(1);
   return account || null;

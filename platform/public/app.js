@@ -29,9 +29,12 @@ const authForm = document.querySelector('#auth-form');
 function setAccount(user) {
   currentUser = user;
   signedIn = Boolean(user);
+  document.querySelector('#access-gate').hidden = signedIn;
+  document.querySelector('#load-board').hidden = !signedIn;
+  document.querySelector('#board-meta').hidden = !signedIn;
   document.querySelector('#my-loads').hidden = !signedIn;
   if (!signedIn) {
-    if (mineOnly) loads = [];
+    loads = [];
     mineOnly = false;
     document.querySelector('#my-loads').setAttribute('aria-pressed', 'false');
     loads = loads.map(load => ({ ...load, canDelete: false }));
@@ -41,7 +44,7 @@ function setAccount(user) {
   document.querySelector('#account-logout').hidden = !signedIn;
   const label = document.querySelector('#account-label');
   label.hidden = !signedIn;
-  label.textContent = user ? user.name : '';
+  label.textContent = user ? user.name + (user.role === 'transportista' ? ' · Transportista' : ' · Empresa') : '';
 }
 function setAuthMode(mode) {
   if (authBusy) return;
@@ -50,8 +53,8 @@ function setAuthMode(mode) {
   const label = registering ? 'Crear cuenta' : 'Iniciar sesión';
   document.querySelector('#auth-title').textContent = label;
   document.querySelector('#auth-submit').textContent = label;
-  document.querySelector('#auth-description').textContent = registering ? 'Crea tu cuenta para publicar cargas en Nicaragua.' : 'Ingresa tu correo y contraseña para continuar.';
-  for (const [id, name] of [['#auth-name-field', 'name'], ['#auth-confirm-field', 'confirmPassword']]) {
+  document.querySelector('#auth-description').textContent = registering ? 'Elige tu tipo de cuenta para acceder a las cargas en Nicaragua.' : 'Ingresa tu correo y contraseña para continuar.';
+  for (const [id, name] of [['#auth-name-field', 'name'], ['#auth-confirm-field', 'confirmPassword'], ['#auth-role-field', 'role']]) {
     document.querySelector(id).hidden = !registering;
     authForm.elements.namedItem(name).disabled = !registering;
     authForm.elements.namedItem(name).required = registering;
@@ -78,10 +81,13 @@ async function refreshLoads() {
 }
 async function updateLoads() {
   try {
-    let response = await fetch(mineOnly ? '/api/loads?mine=1' : '/api/loads', { cache: 'no-store' });
-    if (response.status === 401 && mineOnly) {
+    const response = await fetch(mineOnly ? '/api/loads?mine=1' : '/api/loads', { cache: 'no-store' });
+    if (response.status === 401) {
       setAccount(null);
-      response = await fetch('/api/loads', { cache: 'no-store' });
+      sessionKnown = true;
+      renderLoads();
+      document.querySelector('#connection-status').textContent = '';
+      return;
     }
     if (!response.ok) throw new Error('No se pudieron consultar las cargas.');
     const data = await response.json();
@@ -321,6 +327,8 @@ document.querySelector("#empty-clear").addEventListener("click", clearFilters);
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
 
 
+document.querySelector('#register-carrier').addEventListener('click', () => { openAuth('register'); authForm.elements.namedItem('role').value = 'transportista'; });
+document.querySelector('#gate-login').addEventListener('click', () => openAuth());
 document.querySelector('#account-login').addEventListener('click', () => openAuth());
 document.querySelector('#sign-in').addEventListener('click', () => openAuth('login', true));
 document.querySelector('#auth-login-mode').addEventListener('click', () => setAuthMode('login'));
@@ -337,7 +345,7 @@ authForm.addEventListener('submit', async (event) => {
   if (!authForm.reportValidity()) return;
   const data = new FormData(authForm);
   const payload = { email: String(data.get('email')).trim(), password: String(data.get('password')) };
-  if (authMode === 'register') payload.name = String(data.get('name')).trim();
+  if (authMode === 'register') { payload.name = String(data.get('name')).trim(); payload.role = String(data.get('role')); }
   authBusy = true;
   const button = document.querySelector('#auth-submit');
   button.disabled = true;

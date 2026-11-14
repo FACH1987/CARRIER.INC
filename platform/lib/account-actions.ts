@@ -7,7 +7,7 @@ import { AuthError, authFailure, checkAuthLimit, readAuthJson, responseJson, sta
 
 const emailSchema = z.string().trim().email().max(120).transform(value => value.toLowerCase());
 const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128) });
-const registerSchema = z.object({ email: emailSchema, password: z.string().min(12).max(128), name: z.string().trim().min(2).max(80) });
+const registerSchema = z.object({ email: emailSchema, password: z.string().min(12).max(128), name: z.string().trim().min(2).max(80), role: z.enum(['empresa', 'transportista']).default('empresa') });
 
 export async function register(request: Request) {
   try {
@@ -20,7 +20,7 @@ export async function register(request: Request) {
     const db = getDb();
     const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, data.email)).limit(1);
     if (existing) throw new AuthError('No se pudo crear la cuenta con ese correo. Si ya tienes una cuenta, inicia sesión.', 409);
-    const account = { id: crypto.randomUUID(), name: data.name, email: data.email };
+    const account = { id: crypto.randomUUID(), name: data.name, email: data.email, role: data.role };
     await db.insert(users).values({ ...account, passwordHash: await hashPassword(data.password), createdAt: new Date().toISOString() });
     return responseJson({ user: account }, 201, await startSession(request, account.id));
   } catch (error) { return authFailure(error); }
@@ -36,7 +36,7 @@ export async function login(request: Request) {
     const [stored] = await getDb().select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
     const valid = await verifyPassword(parsed.data.password, stored?.passwordHash);
     if (!stored || !valid) throw new AuthError('Correo o contraseña incorrectos.', 401);
-    const account = { id: stored.id, name: stored.name, email: stored.email };
+    const account = { id: stored.id, name: stored.name, email: stored.email, role: stored.role };
     return responseJson({ user: account }, 200, await startSession(request, stored.id));
   } catch (error) { return authFailure(error); }
 }

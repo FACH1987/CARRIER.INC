@@ -1,6 +1,7 @@
 import { sqliteTable, text, real, integer, index } from 'drizzle-orm/sqlite-core';
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(), email: text('email').notNull().unique(),
+  role: text('role', { enum: ['empresa', 'transportista'] }).notNull().default('empresa'),
   name: text('name').notNull(), passwordHash: text('password_hash').notNull(), createdAt: text('created_at').notNull()
 });
 export const sessions = sqliteTable('sessions', {

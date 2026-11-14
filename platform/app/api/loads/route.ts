@@ -22,11 +22,12 @@ const schema = z.object({
   pay: z.number().finite().positive().max(1000000),
   company: text(80), email: z.string().trim().email().max(120)
 });
-const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Vary': 'Cookie' } });
 
 export async function GET(request: Request) {
   try {
     const user = await currentAccount(request);
+    if (!user) return json({ error: 'Inicia sesión o regístrate para ver las cargas.', user: null, signedIn: false }, 401);
     const mine = new URL(request.url).searchParams.get('mine') === '1';
     if (mine && !user) return json({ error: 'Inicia sesión para ver tus cargas.' }, 401);
     const owner = user ? `account:${user.id}` : null;
