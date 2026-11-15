@@ -13,3 +13,7 @@ Configurar `ADMIN_ACCOUNT_ID` con el identificador confirmado, retirar ambos sec
 El panel permite consultar y eliminar usuarios con confirmación. La eliminación borra la cuenta, sus sesiones y sus cargas de forma transaccional. La cuenta administradora está protegida contra su propia eliminación. No permite cambiar permisos ni contraseñas.
 
 El panel identifica el correo del administrador y ofrece **Eliminar** para las demás cuentas. La confirmación informa que el borrado de la cuenta y sus cargas es definitivo.
+
+## Cuenta exclusivamente administradora
+
+La cuenta configurada en ADMIN_ACCOUNT_ID tiene el tipo efectivo Administrador calculado en el servidor. Consulta el tablero y administra usuarios y comisiones, pero no publica, asigna ni opera fletes ni recibe SMS de transportista. Conserva su identificador, credenciales e historial. El tipo operativo antiguo de D1 se conserva como dato histórico y no determina sus permisos actuales. Los filtros y recuentos la separan de empresas y transportistas. El registro público no permite crear administradores.

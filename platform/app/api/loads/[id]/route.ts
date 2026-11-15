@@ -11,6 +11,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     requireSameOrigin(request);
     const user = await currentAccount(request);
     if (!user) return responseJson({ error: 'Inicia sesión para eliminar tus cargas.' }, 401);
+    if (user.role === 'administrador') return responseJson({ error: 'La cuenta de administrador no opera fletes.' }, 403);
     const id = (await context.params).id;
     if (!z.string().uuid().safeParse(id).success) return responseJson({ error: 'Carga no encontrada.' }, 404);
     const owner = `account:${user.id}`;

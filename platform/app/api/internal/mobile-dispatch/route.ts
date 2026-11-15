@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { Buffer } from 'node:buffer';
-import { and, asc, eq, gt, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, gt, isNotNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '../../../../db';
 import { users, phoneDeliveries } from '../../../../db/schema';
@@ -8,6 +8,7 @@ import { responseJson, AuthError, authFailure } from '../../../../lib/account-au
 import { providerConfig, integrationStatus, twilioRequest } from '../../../../lib/mobile-providers';
 import { carrierNotifications } from '../../../../lib/carrier-notifications';
 import { newLoadNotifications } from '../../../../lib/load-notifications';
+import { adminAccountId } from '../../../../lib/admin-policy';
 export const dynamic = 'force-dynamic';
 function authorized(request: Request) {
   const expected = providerConfig().MOBILE_JOB_TOKEN;
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const cursor = new URL(request.url).searchParams.get('cursor');
     if (cursor && !z.string().uuid().safeParse(cursor).success) throw new AuthError('Cursor inválido.');
     const db = getDb();
-    const recipients = await db.select().from(users).where(and(eq(users.role, 'transportista'), eq(users.phoneChannel, 'sms'), isNotNull(users.phone), isNotNull(users.phoneVerifiedAt), isNotNull(users.phoneConsentAt), cursor ? gt(users.id, cursor) : undefined)).orderBy(asc(users.id)).limit(3);
+    const recipients = await db.select().from(users).where(and(ne(users.id, adminAccountId()), eq(users.role, 'transportista'), eq(users.phoneChannel, 'sms'), isNotNull(users.phone), isNotNull(users.phoneVerifiedAt), isNotNull(users.phoneConsentAt), cursor ? gt(users.id, cursor) : undefined)).orderBy(asc(users.id)).limit(3);
     let accepted = 0, failed = 0, skipped = 0;
     const site = new URL(request.url).origin;
     for (const recipient of recipients) {

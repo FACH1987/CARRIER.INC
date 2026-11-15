@@ -4,7 +4,7 @@ import { getDb } from '../db';
 import { authLimits, sessions, users } from '../db/schema';
 import { withAdminAccess } from './admin-policy';
 
-export type Account = { id: string; name: string; email: string; role: 'empresa' | 'transportista'; isAdmin: boolean };
+export type Account = { id: string; name: string; email: string; role: 'empresa' | 'transportista' | 'administrador'; isAdmin: boolean };
 export class AuthError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }

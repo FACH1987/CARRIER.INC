@@ -6,6 +6,7 @@ import { usesSupabase } from '../../../../../db/supabase';
 import { AuthError, authFailure, currentAccount, readAuthJson, responseJson } from '../../../../../lib/account-auth';
 import { COMMISSION_RATE_BPS, freightQuote } from '../../../../../lib/billing';
 import { carrierDossier, requireCarrierReady, todayNI } from '../../../../../lib/carrier-compliance';
+import { withAdminAccess } from '../../../../../lib/admin-policy';
 
 export const dynamic = 'force-dynamic';
 const actionSchema = z.discriminatedUnion('action', [
@@ -19,6 +20,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!parsed.success) throw new AuthError('Revisa la acción, el correo del transportista y la aceptación de la comisión.');
     const account = await currentAccount(request);
     if (!account) throw new AuthError('Inicia sesión para gestionar la carga.', 401);
+    if (account.role === 'administrador') throw new AuthError('La cuenta de administrador no opera fletes.', 403);
     if (usesSupabase()) throw new AuthError('El módulo de comisiones requiere la base D1 activa.', 503);
     const id = (await context.params).id;
     if (!z.string().uuid().safeParse(id).success) throw new AuthError('Carga no encontrada.', 404);
@@ -33,7 +35,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (!owner) throw new AuthError('Solo quien publicó la carga puede asignarla.', 403);
       if (load.status !== 'disponible') throw new AuthError('La carga ya no está disponible para asignar.', 409);
       const [candidate] = await db.select({ id: users.id, name: users.name }).from(users).where(and(eq(users.email, data.carrierEmail), eq(users.role, 'transportista'))).limit(1);
-      if (!candidate || candidate.id === account.id) throw new AuthError('Indica el correo de otro usuario registrado como transportista.', 400);
+      if (!candidate || candidate.id === account.id || withAdminAccess(candidate).isAdmin) throw new AuthError('Indica el correo de otro usuario registrado como transportista.', 400);
       const day = load.pickupDate > todayNI() ? load.pickupDate : todayNI();
       if (data.action === 'options') {
         const dossier = await carrierDossier(candidate.id, day);

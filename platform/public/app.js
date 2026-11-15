@@ -39,6 +39,8 @@ function setAccount(user) {
   document.querySelector('#load-board').hidden = !signedIn;
   document.querySelector('#board-meta').hidden = !signedIn;
   document.querySelector('#my-loads').hidden = !signedIn;
+  const adminOnly = user?.role === 'administrador';
+  for (const id of ['open-post-top', 'open-post-hero', 'empty-post']) document.getElementById(id).hidden = adminOnly;
   if (!signedIn) {
     loads = [];
     mineOnly = false;
@@ -389,6 +391,7 @@ async function openPostDialog() {
   if (!sessionKnown) await refreshLoads();
   if (!sessionKnown) { showToast('No pudimos verificar tu sesión. Revisa la conexión e intenta de nuevo.'); return; }
   if (!signedIn) { openAuth('login', true); return; }
+  if (currentUser?.role === 'administrador') { showToast('Tu cuenta administra la plataforma y no publica cargas.'); return; }
   document.querySelector('#publish-error').hidden = true;
   if (currentUser) {
     if (!postForm.elements.namedItem('company').value) postForm.elements.namedItem('company').value = currentUser.name;

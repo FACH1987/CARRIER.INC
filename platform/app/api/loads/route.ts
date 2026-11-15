@@ -43,8 +43,8 @@ export async function GET(request: Request) {
     const invoices = mine ? await db.select({ loadId: commissions.loadId, status: commissions.status, amountCents: commissions.amountCents }).from(commissions).where(or(eq(commissions.payerId, user.id), eq(commissions.carrierId, user.id))) : [];
     const invoiceMap = new Map(invoices.map(invoice => [invoice.loadId, invoice]));
     const visible = data.map(({ load, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
-      const own = load.ownerId === owner;
-      const assigned = load.carrierId === user.id;
+      const own = user.role !== 'administrador' && load.ownerId === owner;
+      const assigned = user.role !== 'administrador' && load.carrierId === user.id;
       const { ownerId, carrierId, ...record } = load;
       let quote = null;
       try { quote = freightQuote(load.pay, load.feeAcceptedAt ? load.feeRateBps : COMMISSION_RATE_BPS); } catch { /* Legacy invalid fares remain visible and removable. */ }
@@ -63,6 +63,7 @@ export async function POST(request: Request) {
   try { user = await currentAccount(request); }
   catch { return json({ error: 'No pudimos verificar tu sesión. Intenta de nuevo.' }, 503); }
   if (!user) return json({ error: 'Inicia sesión con tu cuenta de RutaCarga para publicar.' }, 401);
+  if (user.role === 'administrador') return json({ error: 'La cuenta de administrador solo gestiona la plataforma; no publica cargas.' }, 403);
   if (user.role === 'transportista') {
     try { await requireCarrierReady(user.id); }
     catch (error) { return json({ error: error instanceof AuthError ? error.message : 'No pudimos verificar tu expediente.', onboardingRequired: true }, error instanceof AuthError ? error.status : 503); }

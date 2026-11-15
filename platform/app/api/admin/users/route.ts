@@ -1,8 +1,8 @@
-import { and, count, desc, eq, or, sql } from 'drizzle-orm';
+import { and, count, desc, or, sql } from 'drizzle-orm';
 import { getDb } from '../../../../db';
 import { users } from '../../../../db/schema';
 import { authFailure, currentAccount, responseJson } from '../../../../lib/account-auth';
-import { withAdminAccess } from '../../../../lib/admin-policy';
+import { adminAccountId, withAdminAccess } from '../../../../lib/admin-policy';
 import { protectedFinancialHistory } from '../../../../lib/billing';
 
 export const dynamic = 'force-dynamic';
@@ -15,22 +15,24 @@ export async function GET(request: Request) {
     const role = params.get('role') || '';
     const query = (params.get('q') || '').trim();
     const page = Number(params.get('page') || '1');
-    if (!['', 'empresa', 'transportista'].includes(role) || query.length > 120 || !Number.isInteger(page) || page < 1 || page > 100000) return responseJson({ error: 'Revisa los filtros de búsqueda.' }, 400);
+    if (!['', 'empresa', 'transportista', 'administrador'].includes(role) || query.length > 120 || !Number.isInteger(page) || page < 1 || page > 100000) return responseJson({ error: 'Revisa los filtros de búsqueda.' }, 400);
     const needle = query.toLowerCase();
+    const effectiveRole = sql<'empresa' | 'transportista' | 'administrador'>`case when ${users.id} = ${adminAccountId()} then 'administrador' else ${users.role} end`;
     const filter = and(
-      role ? eq(users.role, role as 'empresa' | 'transportista') : undefined,
+      role ? sql`${effectiveRole} = ${role}` : undefined,
       query ? or(sql`instr(lower(${users.name}), ${needle}) > 0`, sql`instr(lower(${users.email}), ${needle}) > 0`) : undefined
     );
     const db = getDb();
     const pageSize = 25;
     const [rows, [matched], groups] = await Promise.all([
-      db.select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt, protectedHistory: protectedFinancialHistory(users.id) }).from(users)
+      db.select({ id: users.id, name: users.name, email: users.email, role: effectiveRole, createdAt: users.createdAt, protectedHistory: protectedFinancialHistory(users.id) }).from(users)
         .where(filter).orderBy(desc(users.createdAt), desc(users.id)).limit(pageSize).offset((page - 1) * pageSize),
       db.select({ total: count() }).from(users).where(filter),
-      db.select({ role: users.role, total: count() }).from(users).groupBy(users.role)
+      db.select({ role: effectiveRole, total: count() }).from(users).groupBy(effectiveRole)
     ]);
     const companies = groups.find(group => group.role === 'empresa')?.total || 0;
     const carriers = groups.find(group => group.role === 'transportista')?.total || 0;
-    return responseJson({ users: rows.map(({ protectedHistory, ...row }) => ({ ...row, isAdmin: withAdminAccess(row).isAdmin, canDelete: !withAdminAccess(row).isAdmin && !protectedHistory })), administrator: { email: account.email }, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, total: companies + carriers } });
+    const administrators = groups.find(group => group.role === 'administrador')?.total || 0;
+    return responseJson({ users: rows.map(({ protectedHistory, ...row }) => ({ ...row, isAdmin: withAdminAccess(row).isAdmin, canDelete: !withAdminAccess(row).isAdmin && !protectedHistory })), administrator: { email: account.email }, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, administradores: administrators, total: companies + carriers + administrators } });
   } catch (error) { return authFailure(error); }
 }
