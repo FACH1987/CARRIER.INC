@@ -2,7 +2,7 @@ import { and, count, desc, or, sql } from 'drizzle-orm';
 import { getDb } from '../../../../db';
 import { users } from '../../../../db/schema';
 import { authFailure, currentAccount, responseJson } from '../../../../lib/account-auth';
-import { adminAccountId, withAdminAccess } from '../../../../lib/admin-policy';
+import { ADMIN_DISPLAY_NAME, adminAccountId, withAdminAccess } from '../../../../lib/admin-policy';
 import { protectedFinancialHistory } from '../../../../lib/billing';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const effectiveRole = sql<'empresa' | 'transportista' | 'administrador'>`case when ${users.id} = ${adminAccountId()} then 'administrador' else ${users.role} end`;
     const filter = and(
       role ? sql`${effectiveRole} = ${role}` : undefined,
-      query ? or(sql`instr(lower(${users.name}), ${needle}) > 0`, sql`instr(lower(${users.email}), ${needle}) > 0`) : undefined
+      query ? or(sql`instr(lower(${users.name}), ${needle}) > 0`, sql`instr(lower(${users.email}), ${needle}) > 0`, and(sql`${users.id} = ${adminAccountId()}`, sql`instr(lower(${ADMIN_DISPLAY_NAME}), ${needle}) > 0`)) : undefined
     );
     const db = getDb();
     const pageSize = 25;
@@ -33,6 +33,6 @@ export async function GET(request: Request) {
     const companies = groups.find(group => group.role === 'empresa')?.total || 0;
     const carriers = groups.find(group => group.role === 'transportista')?.total || 0;
     const administrators = groups.find(group => group.role === 'administrador')?.total || 0;
-    return responseJson({ users: rows.map(({ protectedHistory, ...row }) => ({ ...row, isAdmin: withAdminAccess(row).isAdmin, canDelete: !withAdminAccess(row).isAdmin && !protectedHistory })), administrator: { email: account.email }, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, administradores: administrators, total: companies + carriers + administrators } });
+    return responseJson({ users: rows.map(({ protectedHistory, ...row }) => ({ ...withAdminAccess(row), canDelete: !withAdminAccess(row).isAdmin && !protectedHistory })), administrator: { email: account.email }, total: matched.total, page, pageSize, counts: { empresas: companies, transportistas: carriers, administradores: administrators, total: companies + carriers + administrators } });
   } catch (error) { return authFailure(error); }
 }

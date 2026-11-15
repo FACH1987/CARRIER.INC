@@ -201,6 +201,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(loggedIn.status, 200);
       assert.equal((await loggedIn.json()).user.isAdmin, true);
       assert.equal((await loggedIn.json()).user.role, 'administrador');
+      assert.equal((await loggedIn.json()).user.name, 'Administrador de RutaCarga');
       const adminCookie = cookieFrom(loggedIn);
       assert.equal((await (await api('/api/auth/session', { cookie: adminCookie })).json()).user.isAdmin, true);
       assert.equal((await (await api('/api/auth/session', { cookie: adminCookie })).json()).user.role, 'administrador');
@@ -223,6 +224,10 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(administrators.total, 1);
       assert.equal(administrators.users[0].id, adminId);
       assert.equal(administrators.users[0].role, 'administrador');
+      assert.equal(administrators.users[0].name, 'Administrador de RutaCarga');
+      const namedAdmin = await (await api('/api/admin/users?q=' + encodeURIComponent('Administrador de RutaCarga'), { cookie: adminCookie })).json();
+      assert.equal(namedAdmin.total, 1);
+      assert.equal(namedAdmin.users[0].id, adminId);
       const companies = await (await api('/api/admin/users?role=empresa', { cookie: adminCookie })).json();
       assert(!companies.users.some(row => row.id === adminId));
       for (const row of data.users) assert.deepEqual(Object.keys(row).sort(), ['canDelete', 'createdAt', 'email', 'id', 'isAdmin', 'name', 'role']);
