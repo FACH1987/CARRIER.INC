@@ -18,6 +18,7 @@ function clearAccess(message) {
   records = [];
   rowsElement.innerHTML = '';
   content.hidden = true;
+  document.querySelectorAll('[data-admin-only]').forEach(element => { element.hidden = true; });
   denied.hidden = false;
   statusElement.textContent = message;
 }
@@ -35,6 +36,7 @@ async function loadCommissions() {
     total = data.total;
     records = data.commissions;
     content.hidden = false;
+    document.querySelectorAll('[data-admin-only]').forEach(element => { element.hidden = false; });
     denied.hidden = true;
     document.querySelector('#billing-pending').textContent = money(data.totals.pendingCents);
     document.querySelector('#billing-paid').textContent = money(data.totals.paidCents);

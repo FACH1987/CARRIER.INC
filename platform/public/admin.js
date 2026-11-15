@@ -33,6 +33,7 @@ async function loadUsers() {
       currentRows = [];
       document.querySelector('#admin-identity').textContent = '';
       content.hidden = true;
+      document.querySelectorAll('[data-admin-only]').forEach(element => { element.hidden = true; });
       denied.hidden = false;
       statusElement.textContent = response.status === 401 ? 'Necesitas iniciar sesión.' : 'Tu cuenta no tiene acceso de administrador.';
       return;
@@ -45,6 +46,7 @@ async function loadUsers() {
     pageSize = data.pageSize;
     denied.hidden = true;
     content.hidden = false;
+    document.querySelectorAll('[data-admin-only]').forEach(element => { element.hidden = false; });
     document.querySelector('#users-total').textContent = String(data.counts.total);
     document.querySelector('#users-companies').textContent = String(data.counts.empresas);
     document.querySelector('#users-carriers').textContent = String(data.counts.transportistas);
@@ -79,6 +81,7 @@ tbody.addEventListener('click', async event => {
       tbody.innerHTML = '';
       currentRows = [];
       content.hidden = true;
+      document.querySelectorAll('[data-admin-only]').forEach(element => { element.hidden = true; });
       denied.hidden = false;
       document.querySelector('#admin-identity').textContent = '';
       throw new Error(result.error || 'Tu sesión no permite realizar esta acción.');

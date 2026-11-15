@@ -8,12 +8,12 @@
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=admin-1">
     <link rel="stylesheet" href="admin.css?v=2">
-    <script src="admin.js?v=admin-only-1" defer></script>
+    <script src="admin.js?v=access-1" defer></script>
   </head>
   <body>
-    <header class="topbar"><a class="brand" href="market.html"><img class="brand-mark brand-logo" src="brand-emblem.png" alt="Logo de Gueguense Digital" width="50" height="44"><span class="brand-wordmark">Carrier<span class="brand-accent">.INC</span><small>Diseñado por: Gueguense Digital</small></span></a><a class="button button-light button-small" href="commissions.html">Comisiones</a><a class="button button-outline button-small" href="market.html">Volver a las cargas</a></header>
+    <header class="topbar"><a class="brand" href="market.html"><img class="brand-mark brand-logo" src="brand-emblem.png" alt="Logo de Gueguense Digital" width="50" height="44"><span class="brand-wordmark">Carrier<span class="brand-accent">.INC</span><small>Diseñado por: Gueguense Digital</small></span></a><a class="button button-light button-small" href="commissions.html" data-admin-only hidden>Comisiones</a><a class="button button-outline button-small" href="market.html">Volver a las cargas</a></header>
     <main class="admin-layout">
-      <div class="admin-heading"><div><div class="eyebrow">ADMINISTRACIÓN</div><h1>Usuarios registrados</h1><p>Consulta las empresas y transportistas que forman parte de Carrier.INC.</p></div></div>
+      <div class="admin-heading" data-admin-only hidden><div><div class="eyebrow">ADMINISTRACIÓN</div><h1>Usuarios registrados</h1><p>Consulta las empresas y transportistas que forman parte de Carrier.INC.</p></div></div>
       <p id="admin-status" role="status" aria-live="polite">Verificando tu acceso…</p>
       <section id="admin-denied" class="empty-state" hidden><h2>Acceso exclusivo del administrador</h2><p>Inicia sesión en Carrier.INC con la cuenta autorizada para consultar este panel.</p><a class="button button-dark" href="market.html">Ir a iniciar sesión</a></section>
       <section id="admin-content" hidden aria-label="Directorio de usuarios"><p id="admin-identity" class="admin-identity"></p>
