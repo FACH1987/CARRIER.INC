@@ -95,10 +95,12 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await (await api('/api/auth/session', { cookie: previous })).json()).user, null);
     });
     await t.test('publishes cargo and requires an account to read it', async () => {
-      const cargo = { origin: 'Managua', destination: 'León', pickupDate: '2099-12-01', equipment: 'Refrigerado', weight: 1200, pay: 5000, acceptCommission: true, company: 'Local integration test', email };
+      const cargo = { origin: 'Managua', destination: 'León', pickupDate: '2099-12-01', equipment: 'Furgon Seco 53"', weight: 1200, pay: 5000, acceptCommission: true, company: 'Local integration test', email };
+      assert.equal((await api('/api/loads', { method: 'POST', body: { ...cargo, equipment: 'Refrigerado' }, cookie })).status, 400);
       const response = await api('/api/loads', { method: 'POST', body: cargo, cookie });
       assert.equal(response.status, 201);
       const { load } = await response.json();
+      assert.equal(load.equipment, cargo.equipment);
       publishedId = load.id;
       assert.equal(load.canDelete, true);
       const stored = await db.prepare('select owner_id from loads where id = ?').bind(load.id).first();
@@ -259,7 +261,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const victimLogin = await api('/api/auth/login', { method: 'POST', body: { email: victimEmail, password } });
       assert.equal(victimLogin.status, 200);
       const victimCookie = cookieFrom(victimLogin);
-      const victimCargo = await api('/api/loads', { method: 'POST', cookie: victimCookie, body: { origin: 'A', destination: 'B', pickupDate: '2099-12-01', equipment: 'Refrigerado', weight: 1000, pay: 5000, acceptCommission: true, company: 'Temporary test account', email: victimEmail } });
+      const victimCargo = await api('/api/loads', { method: 'POST', cookie: victimCookie, body: { origin: 'A', destination: 'B', pickupDate: '2099-12-01', equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 5000, acceptCommission: true, company: 'Temporary test account', email: victimEmail } });
       assert.equal(victimCargo.status, 201);
       const endpoint = '/api/admin/users/' + victimId;
       assert.equal((await api(endpoint, { method: 'DELETE' })).status, 401);
@@ -284,8 +286,9 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const createdDriver = await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { action: 'driver', name: 'Driver fixture', categories: ['4A'] } });
       assert.equal(createdDriver.status, 201);
       const driverId = (await createdDriver.json()).id;
-      const vehicleData = { action: 'vehicle', driverId, plate: 'M-TEST-001', description: 'Truck fixture', equipment: 'Refrigerado', capacityKg: 5000, requiredCategory: '4A' };
+      const vehicleData = { action: 'vehicle', driverId, plate: 'M-TEST-001', description: 'Truck fixture', equipment: 'Camion 5 TNL Refrigerado', capacityKg: 5000, requiredCategory: '4A' };
       assert.equal((await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { ...vehicleData, requiredCategory: '6A' } })).status, 400);
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { ...vehicleData, equipment: 'Cabezal' } })).status, 400);
       const createdVehicle = await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: vehicleData });
       assert.equal(createdVehicle.status, 201);
       const vehicleId = (await createdVehicle.json()).id;
@@ -397,7 +400,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
       assert.equal((await review(newLicense)).status, 409);
       await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(metadata.expiresAt, newLicense.id).run();
-      const freight = { origin: 'Managua', destination: 'Leon', pickupDate: afterDays(7), equipment: 'Refrigerado', weight: 1000, pay: 100.05, company: 'Commission test', email };
+      const freight = { origin: 'Managua', destination: 'Leon', pickupDate: afterDays(7), equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 100.05, company: 'Commission test', email };
       assert.equal((await api('/api/loads', { method: 'POST', cookie, body: freight })).status, 400);
       const posted = await api('/api/loads', { method: 'POST', cookie, body: { ...freight, acceptCommission: true, feeCents: 1 } });
       assert.equal(posted.status, 201);

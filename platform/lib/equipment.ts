@@ -1,0 +1,17 @@
+export const equipmentTypes = [
+  'Furgon Seco 53"',
+  'Furgon Refrigerado 53"',
+  'Furgon Plataforma',
+  'Camion 12 TNL Refrigerado',
+  'Camion 12 TNL Seco',
+  'Camion 9.5 TNL Refrigerado',
+  'Camion 9.5 TNL Seco',
+  'Camion 8 TNL Refrigerado',
+  'Camion 8 TNL Seco',
+  'Camion 6 TNL Refrigerado',
+  'Camion 6 TNL Seco',
+  'Camion 5 TNL Refrigerado',
+  'Camion 5 TNL Seco',
+  'Camion 4.5 TNL Refrigerado',
+  'Camion 4.5 TNL Seco',
+] as const;

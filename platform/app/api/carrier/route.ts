@@ -5,12 +5,13 @@ import { users, carrierProfiles, carrierDrivers, carrierVehicles } from '../../.
 import { currentAccount, readAuthJson, responseJson, authFailure, AuthError } from '../../../lib/account-auth';
 import { carrierDossier, categories } from '../../../lib/carrier-compliance';
 import { vehicleCategoryError } from '../../../lib/document-rules';
+import { equipmentTypes } from '../../../lib/equipment';
 export const dynamic = 'force-dynamic';
 const name = z.string().trim().min(2).max(120);
 const schema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('profile'), kind: z.enum(['independiente', 'flota']), legalName: name, consent: z.literal(true) }),
   z.object({ action: z.literal('driver'), name, categories: z.array(z.enum(categories)).min(1).max(5) }),
-  z.object({ action: z.literal('vehicle'), driverId: z.string().uuid(), plate: z.string().trim().min(3).max(15).regex(/^[A-Za-z0-9 -]+$/).transform(x => x.toUpperCase()), description: name, equipment: z.enum(['Furgón cerrado', 'Refrigerado', 'Plataforma', 'Cabezal']), capacityKg: z.number().positive().max(100000), requiredCategory: z.enum(categories) })
+  z.object({ action: z.literal('vehicle'), driverId: z.string().uuid(), plate: z.string().trim().min(3).max(15).regex(/^[A-Za-z0-9 -]+$/).transform(x => x.toUpperCase()), description: name, equipment: z.enum(equipmentTypes), capacityKg: z.number().positive().max(100000), requiredCategory: z.enum(categories) })
 ]);
 export async function GET(request: Request) {
   try {

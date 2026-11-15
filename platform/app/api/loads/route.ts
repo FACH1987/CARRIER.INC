@@ -7,6 +7,7 @@ import { currentAccount } from '../../../lib/account-auth';
 import { COMMISSION_RATE_BPS, freightQuote } from '../../../lib/billing';
 import { carrierDossier, requireCarrierReady } from '../../../lib/carrier-compliance';
 import { AuthError } from '../../../lib/account-auth';
+import { equipmentTypes } from '../../../lib/equipment';
 
 export const dynamic = 'force-dynamic';
 const dayInNicaragua = () => {
@@ -20,7 +21,7 @@ const schema = z.object({
     const date = new Date(value + 'T12:00:00Z');
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value && value >= dayInNicaragua();
   }, 'La fecha debe ser válida y no estar en el pasado.'),
-  equipment: z.enum(['Furgón cerrado', 'Refrigerado', 'Plataforma', 'Cabezal']),
+  equipment: z.enum(equipmentTypes),
   weight: z.number().finite().positive().max(100000),
   pay: z.number().finite().min(1).max(1000000).refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 0.000001),
   acceptCommission: z.literal(true),
