@@ -27,8 +27,8 @@ export async function POST(request: Request) {
     let accepted = 0, failed = 0, skipped = 0;
     const site = new URL(request.url).origin;
     for (const recipient of recipients) {
-      const documents = recipient.notifyDocuments ? (await carrierNotifications(recipient.id)).alerts.map(alert => ({ eventType: 'document', eventId: alert.id, message: `RutaCarga: ${alert.title}. ${alert.subject}. Vence: ${alert.expiresAt}. ${alert.message} Renueva: ${site}/carrier.html` })) : [];
-      const loads = recipient.notifyLoads ? (await newLoadNotifications(recipient.id)).map(alert => ({ eventType: 'load', eventId: alert.loadId, message: `RutaCarga: ${alert.title}. ${alert.subject}. ${alert.message} Ver carga: ${site}/market.html#tablero` })) : [];
+      const documents = recipient.notifyDocuments ? (await carrierNotifications(recipient.id)).alerts.map(alert => ({ eventType: 'document', eventId: alert.id, message: `Carrier.INC: ${alert.title}. ${alert.subject}. Vence: ${alert.expiresAt}. ${alert.message} Renueva: ${site}/carrier.html` })) : [];
+      const loads = recipient.notifyLoads ? (await newLoadNotifications(recipient.id)).map(alert => ({ eventType: 'load', eventId: alert.loadId, message: `Carrier.INC: ${alert.title}. ${alert.subject}. ${alert.message} Ver carga: ${site}/market.html#tablero` })) : [];
       const previous = new Set((await db.select({ id: phoneDeliveries.id }).from(phoneDeliveries).where(eq(phoneDeliveries.userId, recipient.id))).map(row => row.id));
       let attempts = 0;
       for (const event of [...documents, ...loads]) {

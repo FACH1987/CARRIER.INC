@@ -238,7 +238,7 @@ h1, h2, h3, p { margin-top: 0; }
   .post-dialog { max-height: calc(100dvh - 18px); }
 }
 
-/* Güegüense Digital · RutaCarga */
+/* Güegüense Digital · Carrier.INC */
 :root { --navy: #0a1b42; --sky: #7dd3fc; }
 .topbar { height: 88px; background: #fff; border-bottom-color: #e1e8f4; }
 .brand { gap: 11px; letter-spacing: -.6px; }

@@ -1,4 +1,4 @@
-# RutaCarga Nicaragua · Plataforma compartida
+# Carrier.INC Nicaragua · Plataforma compartida
 
 La aplicación de producción está en `platform/`. Usa una API y Cloudflare D1 para compartir las cargas entre dispositivos. El archivo `index.html` de la raíz abre la web publicada para ingresar y consultar datos reales.
 
@@ -15,13 +15,13 @@ Desde `platform/`, instala dependencias con `npm ci` y arranca con `npm run dev`
 
 ## Alojamiento
 
-El proyecto de Sites y la conexión D1 se declaran en `platform/.openai/hosting.json`. Enlace de la web: [RutaCarga Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
+El proyecto de Sites y la conexión D1 se declaran en `platform/.openai/hosting.json`. Enlace de la web: [Carrier.INC Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
 
 ## Base de datos elegida
 
 Se mantiene Cloudflare D1 como base de datos activa. Supabase queda como una opción futura; el [paquete de preparación](platform/supabase/README.md) incluye el esquema completo, conversión sin conexión y continuidad de cuentas, documentos, comisiones y SMS. No activar la migración ni configurar una suscripción para ella hasta que el usuario decida retomarla.
 
-Identidad visual: RutaCarga por Güegüense Digital, con azul marino, azul eléctrico y celeste.
+Identidad visual: Carrier.INC por Güegüense Digital, con azul marino, azul eléctrico y celeste.
 
 Gestión de publicaciones: inicia sesión y usa **Mis cargas** para ver todas tus cargas, incluidas las vencidas. El botón **Eliminar** pide confirmación y borra definitivamente solo una carga de la cuenta autenticada.
 

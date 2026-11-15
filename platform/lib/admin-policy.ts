@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 
 export const adminAccountId = () => (env as unknown as { ADMIN_ACCOUNT_ID?: string }).ADMIN_ACCOUNT_ID || '';
-export const ADMIN_DISPLAY_NAME = 'Administrador de RutaCarga';
+export const ADMIN_DISPLAY_NAME = 'Administrador de Carrier.INC';
 
 export function withAdminAccess<T extends { id: string; role: string }>(account: T): Omit<T, 'role'> & { role: T['role'] | 'administrador'; isAdmin: boolean };
 export function withAdminAccess<T extends { id: string }>(account: T): T & { isAdmin: boolean };

@@ -1,4 +1,4 @@
-﻿# Cuentas propias de RutaCarga
+﻿# Cuentas propias de Carrier.INC
 
 El acceso de la aplicación usa correo y contraseña guardados en D1. Las cabeceras de identidad del alojamiento no autentican publicaciones. No se enlazan automáticamente cuentas nuevas con propietarios antiguos por coincidencia de correo.
 

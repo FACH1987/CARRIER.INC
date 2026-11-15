@@ -1,4 +1,4 @@
-# Comisiones de RutaCarga
+# Comisiones de Carrier.INC
 
 La empresa que publica acepta una comisión adicional del 10% del flete al publicar o asignar una carga anterior. El transportista conserva el flete completo. Ejemplo: flete C$10,000, comisión C$1,000, total empresa C$11,000. Los cálculos se realizan en centavos de NIO y se redondean al centavo más cercano.
 

@@ -27,6 +27,17 @@ let continueToPublish = false;
 let authBusy = false;
 const authDialog = document.querySelector('#auth-dialog');
 const authForm = document.querySelector('#auth-form');
+const passwordToggle = document.querySelector('#auth-password-toggle');
+function setPasswordVisible(visible) {
+  authForm.elements.namedItem('password').type = visible ? 'text' : 'password';
+  passwordToggle.textContent = visible ? 'Ocultar' : 'Mostrar';
+  passwordToggle.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+  passwordToggle.setAttribute('aria-pressed', String(visible));
+}
+passwordToggle.addEventListener('click', () => {
+  setPasswordVisible(authForm.elements.namedItem('password').type === 'password');
+});
+authDialog.addEventListener('close', () => setPasswordVisible(false));
 function setAccount(user) {
   const changed = currentUser?.id !== user?.id || currentUser?.role !== user?.role;
   currentUser = user;
@@ -58,6 +69,7 @@ function setAccount(user) {
 }
 function setAuthMode(mode) {
   if (authBusy) return;
+  setPasswordVisible(false);
   authMode = mode;
   const registering = mode === 'register';
   const label = registering ? 'Crear cuenta' : 'Iniciar sesión';
@@ -73,7 +85,7 @@ function setAuthMode(mode) {
   password.minLength = registering ? 12 : 1;
   password.autocomplete = registering ? 'new-password' : 'current-password';
   authForm.elements.namedItem('confirmPassword').setCustomValidity('');
-  document.querySelector('#auth-password-help').textContent = registering ? 'Elige una contraseña de 12 a 128 caracteres.' : 'Usa la contraseña de tu cuenta de RutaCarga.';
+  document.querySelector('#auth-password-help').textContent = registering ? 'Elige una contraseña de 12 a 128 caracteres.' : 'Usa la contraseña de tu cuenta de Carrier.INC.';
   document.querySelector('#auth-login-mode').setAttribute('aria-pressed', String(!registering));
   document.querySelector('#auth-register-mode').setAttribute('aria-pressed', String(registering));
   document.querySelector('#auth-error').hidden = true;
@@ -259,7 +271,7 @@ const assignForm = document.querySelector('#assign-form');
 let assigningId = null;
 const statusNames = { disponible: 'Disponible', asignada: 'Esperando aceptación', en_transito: 'En tránsito', entregada: 'Entrega reportada', finalizada: 'Finalizada' };
 function quoteText(quote) {
-  return 'Flete al transportista: ' + formatCurrency(quote.fareCents / 100) + ' · Comisión RutaCarga 10%: ' + formatCurrency(quote.commissionCents / 100) + ' · Total empresa: ' + formatCurrency(quote.totalCents / 100);
+  return 'Flete al transportista: ' + formatCurrency(quote.fareCents / 100) + ' · Comisión Carrier.INC 10%: ' + formatCurrency(quote.commissionCents / 100) + ' · Total empresa: ' + formatCurrency(quote.totalCents / 100);
 }
 function updatePostQuote() {
   const pay = Number(postForm.elements.namedItem('pay').value);
@@ -321,7 +333,7 @@ loadList.addEventListener('click', async event => {
     return;
   }
   const messages = {
-    accept: '¿Aceptar este viaje por el flete indicado? La comisión de RutaCarga la paga la empresa, adicional al flete.',
+    accept: '¿Aceptar este viaje por el flete indicado? La comisión de Carrier.INC la paga la empresa, adicional al flete.',
     reject: '¿Rechazar esta asignación? La carga volverá a estar disponible y no se generará comisión.',
     cancel_assignment: '¿Retirar la asignación antes de que el transportista la acepte? No se generará comisión.',
     deliver: '¿Confirmas que realizaste la entrega? La empresa deberá confirmar la finalización.',

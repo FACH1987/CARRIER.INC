@@ -242,7 +242,7 @@ h1, h2, h3, p { margin-top: 0; }
 #connection-status { color: #435b7c; line-height: 1.6; font-size: 12px; }
 #sign-in { margin-bottom: 16px; }
 
-/* Güegüense Digital · RutaCarga */
+/* Güegüense Digital · Carrier.INC */
 :root { --navy: #0a1b42; --sky: #7dd3fc; }
 .topbar { height: 88px; background: #fff; border-bottom-color: #e1e8f4; }
 .brand { gap: 11px; letter-spacing: -.6px; }
@@ -358,6 +358,11 @@ h1, h2, h3, p { margin-top: 0; }
 .top-actions { display: flex; align-items: center; gap: 10px; }
 .account-label { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 12px; }
 .account-dialog { width: min(470px, calc(100vw - 30px)); }
+.password-control { position: relative; }
+.password-control input { padding-right: 88px; }
+.password-toggle { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); min-height: 36px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; color: #1d4ed8; font: inherit; font-size: 12px; cursor: pointer; }
+.password-toggle:hover { background: #eff5ff; }
+.password-toggle:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 1px; }
 .account-fields { display: grid; gap: 15px; }
 .account-modes { display: flex; gap: 5px; background: #eff5ff; padding: 5px; border-radius: 8px; margin-bottom: 22px; }
 .account-modes button { flex: 1; border: 0; padding: 11px 6px; border-radius: 6px; background: transparent; color: #435b7c; cursor: pointer; font: inherit; }

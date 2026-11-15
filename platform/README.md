@@ -1,4 +1,4 @@
-﻿# RutaCarga Nicaragua
+﻿# Carrier.INC Nicaragua
 
 Aplicación web con API de cargas compartidas y Cloudflare D1.
 
@@ -12,11 +12,11 @@ Aplicación web con API de cargas compartidas y Cloudflare D1.
 
 El hosting Sites aplica las migraciones de producción durante el despliegue. Las bases de datos local y de producción son independientes.
 
-Las cargas solo pueden consultarse con una cuenta de empresa o transportista y una sesión iniciada. Publicarlas requiere una cuenta de RutaCarga con correo y contraseña. Los datos de contacto se comparten con usuarios registrados, con consentimiento. No se importan los datos del almacenamiento local del prototipo.
+Las cargas solo pueden consultarse con una cuenta de empresa o transportista y una sesión iniciada. Publicarlas requiere una cuenta de Carrier.INC con correo y contraseña. Los datos de contacto se comparten con usuarios registrados, con consentimiento. No se importan los datos del almacenamiento local del prototipo.
 
-Web: [RutaCarga Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
+Web: [Carrier.INC Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
 
-Identidad visual: RutaCarga por Güegüense Digital, con azul marino, azul eléctrico y celeste.
+Identidad visual: Carrier.INC por Güegüense Digital, con azul marino, azul eléctrico y celeste.
 
 Las cuentas propias se documentan en `docs/accounts.md`. Para probarlas, compila con `npm run build` y ejecuta `npm run test:accounts` en un entorno temporal aislado. La verificación y recuperación de correo aún no están configuradas.
 

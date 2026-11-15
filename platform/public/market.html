@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#152d52">
     <meta name="description" content="Plataforma para empresas y transportistas en Nicaragua. Publica cargas y encuentra transporte por origen, destino y equipo.">
-    <title>RutaCarga Nicaragua | Güegüense Digital</title>
+    <title>Carrier.INC Nicaragua | Güegüense Digital</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
-    <link rel="stylesheet" href="styles.css?v=documents-1">
-    <script src="app.js?v=admin-only-1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=carrier-1">
+    <script src="app.js?v=carrier-1" defer></script>
   <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
   <body>
     <header class="topbar">
-      <a class="brand" href="#" aria-label="RutaCarga. Diseñado por: Gueguense Digital. Inicio">
+      <a class="brand" href="#" aria-label="Carrier.INC. Diseñado por: Gueguense Digital. Inicio">
         <img class="brand-mark brand-logo" src="brand-emblem.png" alt="Logo de Gueguense Digital" width="50" height="44">
-        <span class="brand-wordmark">Ruta<span class="brand-accent">Carga</span><small>Diseñado por: Gueguense Digital</small></span>
+        <span class="brand-wordmark">Carrier<span class="brand-accent">.INC</span><small>Diseñado por: Gueguense Digital</small></span>
       </a>
       <nav class="main-nav" aria-label="Navegación principal">
         <a class="nav-link active" href="#cargas">Buscar cargas</a>
@@ -153,7 +153,7 @@
       </section>
     </main>
 
-    <footer class="footer"><a class="brand footer-brand" href="#"><img class="brand-mark brand-logo" src="brand-emblem.png" alt="Logo de Gueguense Digital" width="50" height="44"><span class="brand-wordmark">Ruta<span class="brand-accent">Carga</span><small>Diseñado por: Gueguense Digital</small></span></a><span>Una plataforma de <strong>Güegüense Digital</strong>.</span><span>© <span id="current-year"></span> RutaCarga · Güegüense Digital</span></footer>
+    <footer class="footer"><a class="brand footer-brand" href="#"><img class="brand-mark brand-logo" src="brand-emblem.png" alt="Logo de Gueguense Digital" width="50" height="44"><span class="brand-wordmark">Carrier<span class="brand-accent">.INC</span><small>Diseñado por: Gueguense Digital</small></span></a><span>Una plataforma de <strong>Güegüense Digital</strong>.</span><span>© <span id="current-year"></span> Carrier.INC · Güegüense Digital</span></footer>
 
     <dialog class="post-dialog" id="post-dialog" aria-labelledby="dialog-title">
       <form class="post-form" id="post-form">
@@ -171,21 +171,21 @@
           <label class="form-field"><span>Nombre de la empresa</span><input name="company" required maxlength="80" placeholder="Nombre de tu empresa"></label>
           <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="Tu correo de contacto"></label>
         </div>
-        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán visibles para usuarios registrados. Para publicar necesitas una cuenta de RutaCarga. El contacto abre la aplicación de correo.</p>
-        <label class="form-note"><input name="consent" type="checkbox" required> Acepto compartir estos datos y mi correo con usuarios registrados para recibir consultas sobre esta carga.</label><div id="post-quote" class="freight-quote" aria-live="polite">Ingresa el valor del flete para ver la comisión.</div><label class="form-note"><input name="acceptCommission" type="checkbox" required> Acepto pagar a RutaCarga una comisión adicional del 10% del flete cuando la carga finalice. El transportista conserva el flete completo.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
+        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán visibles para usuarios registrados. Para publicar necesitas una cuenta de Carrier.INC. El contacto abre la aplicación de correo.</p>
+        <label class="form-note"><input name="consent" type="checkbox" required> Acepto compartir estos datos y mi correo con usuarios registrados para recibir consultas sobre esta carga.</label><div id="post-quote" class="freight-quote" aria-live="polite">Ingresa el valor del flete para ver la comisión.</div><label class="form-note"><input name="acceptCommission" type="checkbox" required> Acepto pagar a Carrier.INC una comisión adicional del 10% del flete cuando la carga finalice. El transportista conserva el flete completo.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
       </form>
     </dialog>
 
-    <dialog class="post-dialog account-dialog" id="assign-dialog" aria-labelledby="assign-title"><form id="assign-form" class="post-form"><div class="dialog-heading"><div><h2 id="assign-title">Asignar transportista</h2><p id="assign-route"></p></div><button class="close-button" id="assign-close" type="button" aria-label="Cerrar asignación">×</button></div><label class="form-field"><span>Correo del transportista registrado</span><input name="carrierEmail" type="email" maxlength="120" required autocomplete="off"></label><p class="account-help">Solo se muestran unidades con documentos cargados y vigentes hasta la fecha de recogida, equipo compatible y capacidad suficiente.</p><button type="button" id="assign-lookup" class="button button-light">Consultar unidades disponibles</button><label class="form-field"><span>Unidad y conductor con expediente completo</span><select name="vehicleId" required><option value="">Consulta primero el transportista</option></select></label><p id="assign-verified" class="account-help"></p><div id="assign-quote" class="freight-quote"></div><label class="form-note"><input name="acceptCommission" type="checkbox" required> Confirmo la asignación y acepto pagar la comisión adicional del 10% a RutaCarga al finalizar la carga.</label><p id="assign-error" class="account-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-dark" type="submit">Asignar transportista</button></div></form></dialog>
+    <dialog class="post-dialog account-dialog" id="assign-dialog" aria-labelledby="assign-title"><form id="assign-form" class="post-form"><div class="dialog-heading"><div><h2 id="assign-title">Asignar transportista</h2><p id="assign-route"></p></div><button class="close-button" id="assign-close" type="button" aria-label="Cerrar asignación">×</button></div><label class="form-field"><span>Correo del transportista registrado</span><input name="carrierEmail" type="email" maxlength="120" required autocomplete="off"></label><p class="account-help">Solo se muestran unidades con documentos cargados y vigentes hasta la fecha de recogida, equipo compatible y capacidad suficiente.</p><button type="button" id="assign-lookup" class="button button-light">Consultar unidades disponibles</button><label class="form-field"><span>Unidad y conductor con expediente completo</span><select name="vehicleId" required><option value="">Consulta primero el transportista</option></select></label><p id="assign-verified" class="account-help"></p><div id="assign-quote" class="freight-quote"></div><label class="form-note"><input name="acceptCommission" type="checkbox" required> Confirmo la asignación y acepto pagar la comisión adicional del 10% a Carrier.INC al finalizar la carga.</label><p id="assign-error" class="account-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-dark" type="submit">Asignar transportista</button></div></form></dialog>
     <dialog class="post-dialog account-dialog" id="auth-dialog" aria-labelledby="auth-title">
       <form class="post-form" id="auth-form">
-        <div class="dialog-heading"><div><div class="eyebrow">TU CUENTA DE RUTACARGA</div><h2 id="auth-title">Iniciar sesión</h2><p id="auth-description">Ingresa tu correo y contraseña para continuar.</p></div><button class="close-button" id="auth-close" type="button" aria-label="Cerrar acceso a cuenta">×</button></div>
+        <div class="dialog-heading"><div><div class="eyebrow">TU CUENTA DE Carrier.INC</div><h2 id="auth-title">Iniciar sesión</h2><p id="auth-description">Ingresa tu correo y contraseña para continuar.</p></div><button class="close-button" id="auth-close" type="button" aria-label="Cerrar acceso a cuenta">×</button></div>
         <div class="account-modes" aria-label="Tipo de acceso"><button type="button" id="auth-login-mode" aria-pressed="true">Iniciar sesión</button><button type="button" id="auth-register-mode" aria-pressed="false">Crear cuenta</button></div>
         <div class="account-fields"><label class="form-field" id="auth-role-field" hidden><span>Tipo de cuenta</span><select name="role" disabled><option value="empresa">Empresa</option><option value="transportista">Transportista</option></select></label>
           <label class="form-field" id="auth-name-field" hidden><span>Tu nombre o empresa</span><input name="name" autocomplete="name" minlength="2" maxlength="80" disabled></label>
           <label class="form-field" id="auth-phone-field" hidden><span>Teléfono del transportista (+505)</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" placeholder="+505 8888 8888" disabled></label><label class="form-note" id="auth-sms-field" hidden><input name="smsConsent" type="checkbox" disabled> Quiero recibir SMS de cargas nuevas y vencimientos. Confirmaré mi número con un código y podré desactivar los avisos desde Mi expediente. Los envíos requieren que el servicio SMS esté conectado.</label><label class="form-field"><span>Correo electrónico</span><input name="email" type="email" autocomplete="username" maxlength="120" required></label>
-          <label class="form-field"><span>Contraseña</span><input name="password" type="password" autocomplete="current-password" minlength="1" maxlength="128" required aria-describedby="auth-password-help"></label>
-          <p id="auth-password-help" class="account-help">Usa la contraseña de tu cuenta de RutaCarga.</p>
+          <div class="form-field"><label for="auth-password">Contraseña</label><div class="password-control"><input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="1" maxlength="128" required aria-describedby="auth-password-help"><button id="auth-password-toggle" class="password-toggle" type="button" aria-controls="auth-password" aria-label="Mostrar contraseña" aria-pressed="false">Mostrar</button></div></div>
+          <p id="auth-password-help" class="account-help">Usa la contraseña de tu cuenta de Carrier.INC.</p>
           <label class="form-field" id="auth-confirm-field" hidden><span>Repite la contraseña</span><input name="confirmPassword" type="password" autocomplete="new-password" maxlength="128" disabled></label>
         </div>
         <p class="account-help">El registro de transportistas continúa con la carga de cédula, licencia, seguros y documentos de cada vehículo. El acceso a nuevas cargas se habilita automáticamente al completar los documentos requeridos y vigentes.</p><p id="auth-error" class="account-error" role="alert" hidden></p>

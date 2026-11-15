@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   let user;
   try { user = await currentAccount(request); }
   catch { return json({ error: 'No pudimos verificar tu sesión. Intenta de nuevo.' }, 503); }
-  if (!user) return json({ error: 'Inicia sesión con tu cuenta de RutaCarga para publicar.' }, 401);
+  if (!user) return json({ error: 'Inicia sesión con tu cuenta de Carrier.INC para publicar.' }, 401);
   if (user.role === 'administrador') return json({ error: 'La cuenta de administrador solo gestiona la plataforma; no publica cargas.' }, 403);
   if (user.role === 'transportista') {
     try { await requireCarrierReady(user.id); }
