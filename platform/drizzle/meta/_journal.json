@@ -50,6 +50,13 @@
       "when": 1794690729798,
       "tag": "0006_pretty_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794707002756,
+      "tag": "0007_nice_sebastian_shaw",
+      "breakpoints": true
     }
   ]
 }

@@ -37,7 +37,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
     compatibilityDate: '2026-05-15', compatibilityFlags: ['nodejs_compat'],
     d1Databases: ['DB'], d1Persist: false,
     r2Buckets: ['DOCUMENTS'], r2Persist: false,
-    bindings: { ADMIN_ACCOUNT_ID: adminId, ADMIN_SETUP_TOKEN: setupToken, ADMIN_SETUP_EMAIL: email }
+    bindings: { ADMIN_ACCOUNT_ID: adminId, ADMIN_SETUP_TOKEN: setupToken, ADMIN_SETUP_EMAIL: email, BANK_ACCOUNT_ENCRYPTION_KEY: '01'.repeat(32) }
   });
   t.after(async () => { await runtime.dispose(); });
   const db = await runtime.getD1Database('DB');
@@ -93,6 +93,28 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       cookie = cookieFrom(response);
       assert.notEqual(cookie, previous);
       assert.equal((await (await api('/api/auth/session', { cookie: previous })).json()).user, null);
+    });
+    await t.test('bank details require ownership and consent, are encrypted and masked, and never move money', async () => {
+      const details = { action: 'save', bankName: 'Synthetic Bank', holderName: 'Synthetic Company', accountType: 'corriente', currency: 'NIO', accountNumber: '1234-5678-9012', consent: true };
+      assert.equal((await api('/api/bank-account')).status, 401);
+      assert.equal((await api('/api/bank-account', { method: 'POST', cookie, body: { ...details, consent: false } })).status, 400);
+      assert.equal((await api('/api/bank-account', { method: 'POST', cookie, body: details, headers: { Origin: 'https://other.example' } })).status, 403);
+      const saved = await api('/api/bank-account', { method: 'POST', cookie, body: details });
+      assert.equal(saved.status, 200);
+      assert.equal((await saved.json()).transfersAutomatic, false);
+      const summary = await (await api('/api/bank-account', { cookie })).json();
+      assert.equal(summary.bankAccount.maskedNumber, '•••• 9012');
+      assert(!JSON.stringify(summary).includes('123456789012'));
+      assert(!JSON.stringify(summary).includes('encryptedNumber'));
+      const [owner] = (await db.prepare('select id from users where email = ?').bind(email).all()).results;
+      const encrypted = await db.prepare('select encrypted_number from bank_accounts where user_id = ?').bind(owner.id).first();
+      assert.match(encrypted.encrypted_number, /^v1:/);
+      assert(!encrypted.encrypted_number.includes('123456789012'));
+      const reveal = await api('/api/bank-account', { method: 'POST', cookie, body: { action: 'reveal' } });
+      assert.equal((await reveal.json()).accountNumber, '123456789012');
+      assert.equal((await api('/api/bank-account?userId=' + randomUUID(), { cookie })).status, 403);
+      const malformed = await api('/api/bank-account', { method: 'POST', cookie, body: { ...details, accountNumber: '<script>' } });
+      assert.equal(malformed.status, 400);
     });
     await t.test('publishes cargo and requires an account to read it', async () => {
       const cargo = { origin: 'Managua', destination: 'León', pickupDate: '2099-12-01', equipment: 'Furgon Seco 53"', weight: 1200, pay: 5000, acceptCommission: true, company: 'Local integration test', email };
@@ -160,6 +182,14 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await created.json()).user.isAdmin, false);
       assert.notEqual((await created.json()).user.id, adminId);
       const carrierCookie = cookieFrom(created);
+      const company = await db.prepare('select id from users where email = ?').bind(email).first();
+      assert.equal((await api('/api/bank-account?userId=' + company.id, { cookie: carrierCookie })).status, 403);
+      const carrierBank = { action: 'save', bankName: 'Synthetic Bank', holderName: 'Synthetic Carrier', accountType: 'ahorro', currency: 'USD', accountNumber: '999900001111', consent: true };
+      assert.equal((await api('/api/bank-account', { method: 'POST', cookie: carrierCookie, body: carrierBank })).status, 200);
+      assert.equal((await (await api('/api/bank-account', { cookie: carrierCookie })).json()).bankAccount.currency, 'USD');
+      assert.equal((await api('/api/bank-account', { method: 'DELETE', cookie: carrierCookie, headers: { Origin: 'https://other.example' } })).status, 403);
+      assert.equal((await api('/api/bank-account', { method: 'DELETE', cookie: carrierCookie })).status, 200);
+      assert.equal((await (await api('/api/bank-account', { cookie: carrierCookie })).json()).bankAccount, null);
       assert.equal((await api('/api/carrier/phone')).status, 401);
       assert.equal((await api('/api/carrier/phone', { cookie })).status, 403);
       let phoneSettings = await (await api('/api/carrier/phone', { cookie: carrierCookie })).json();
@@ -205,6 +235,13 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await loggedIn.json()).user.role, 'administrador');
       assert.equal((await loggedIn.json()).user.name, 'Administrador de Carrier.INC');
       const adminCookie = cookieFrom(loggedIn);
+      const bankOwner = await db.prepare('select id from users where email = ?').bind(email).first();
+      const bankUrl = '/api/bank-account?userId=' + bankOwner.id;
+      assert.equal((await api('/api/bank-account', { cookie: adminCookie })).status, 403);
+      assert.equal((await (await api(bankUrl, { cookie: adminCookie })).json()).readOnly, true);
+      assert.equal((await (await api(bankUrl, { method: 'POST', cookie: adminCookie, body: { action: 'reveal' } })).json()).accountNumber, '123456789012');
+      assert.equal((await api(bankUrl, { method: 'POST', cookie: adminCookie, body: { action: 'save' } })).status, 403);
+      assert.equal((await api(bankUrl, { method: 'DELETE', cookie: adminCookie })).status, 403);
       assert.equal((await (await api('/api/auth/session', { cookie: adminCookie })).json()).user.isAdmin, true);
       assert.equal((await (await api('/api/auth/session', { cookie: adminCookie })).json()).user.role, 'administrador');
       await db.prepare("update users set role = 'transportista' where id = ?").bind(adminId).run();

@@ -1,0 +1,9 @@
+# Cuentas bancarias para transferencias manuales
+
+Cada Empresa puede registrar una cuenta de origen y cada Transportista una cuenta para recibir el flete, desde **Cuenta bancaria**. Se guarda una cuenta por usuario: banco, titular, número, tipo (ahorro/corriente), moneda (NIO/USD) y fecha de autorización. El titular puede reemplazarla o eliminarla. La moneda de la cuenta no cambia la moneda del flete ni implica conversión automática.
+
+El número se cifra con AES-256-GCM y se vincula al identificador del titular. La clave de servidor `BANK_ACCOUNT_ENCRYPTION_KEY` debe tener 64 caracteres hexadecimales aleatorios y guardarse como secreto. La configuración local vive en `.dev.vars`, excluido de Git. Para publicar, crear otra clave de producción y conservarla con el respaldo de la base: perderla impide descifrar las cuentas; cambiarla requiere un proceso de recifrado. La futura migración a Supabase debe conservar las cuentas cifradas y esta clave.
+
+La API exige sesión y autorización del titular o administrador. Las consultas normales devuelven solo los últimos cuatro caracteres; el número completo requiere una solicitud explícita del titular o administrador. El administrador consulta desde **Usuarios**, sin poder editar la cuenta de otra persona. No se publican datos bancarios en el tablero, las notificaciones SMS ni la API de cargas. El sitio no valida la existencia o titularidad de la cuenta ante el banco.
+
+Registrar datos no autoriza débitos ni crea cobros, fondos retenidos o transferencias. No se solicitan contraseñas de banca en línea, tarjetas, PIN ni códigos de seguridad. La empresa confirma la entrega dentro del flujo operativo actual; el movimiento bancario se realiza fuera de la aplicación. Esta versión no comprueba un pago anticipado ni bloquea la publicación hasta recibirlo. El registro manual de comisiones sigue siendo independiente y no acredita que se haya pagado el flete al transportista.

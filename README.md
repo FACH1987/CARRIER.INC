@@ -38,3 +38,5 @@ Transportistas: el alta continúa en **Mi expediente**, con documentos privados 
 El centro **Avisos** recuerda vencimientos a 30, 15, 7 y 1 día dentro de la app. Las unidades con documentos vencidos pierden acceso a nuevas cargas hasta renovar. La evaluación automática comprueba archivos presentes, fechas declaradas y compatibilidad básica de categorías; no autentica el contenido de las copias ni sustituye la validación ante las autoridades.
 
 Los transportistas pueden registrar y confirmar su teléfono y autorizar avisos por SMS de cargas compatibles y vencimientos. La integración con Twilio requiere configurar credenciales y programación de envíos. Consulta [activación y privacidad de SMS](platform/docs/mobile-and-reading.md).
+
+Las empresas y transportistas pueden registrar su cuenta bancaria privada para transferencias manuales; consulta [cuentas bancarias](platform/docs/bank-accounts.md). Guardar estos datos no realiza cobros ni pagos automáticos.

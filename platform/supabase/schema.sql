@@ -20,6 +20,20 @@ CREATE UNIQUE INDEX "users_email_unique" ON public."users" ("email");
 ALTER TABLE public."users" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public."users" FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public."users" TO service_role;
+CREATE TABLE public."bank_accounts" (
+  "user_id" text PRIMARY KEY NOT NULL,
+  "bank_name" text NOT NULL,
+  "holder_name" text NOT NULL,
+  "account_type" text NOT NULL,
+  "currency" text NOT NULL,
+  "encrypted_number" text NOT NULL,
+  "last_four" text NOT NULL,
+  "consent_at" text NOT NULL,
+  "updated_at" text NOT NULL
+);
+ALTER TABLE public."bank_accounts" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public."bank_accounts" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."bank_accounts" TO service_role;
 CREATE TABLE public."auth_limits" (
   "key" text PRIMARY KEY NOT NULL,
   "attempts" bigint NOT NULL,
@@ -185,6 +199,7 @@ CREATE INDEX "phone_deliveries_state_idx" ON public."phone_deliveries" ("state")
 ALTER TABLE public."phone_deliveries" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public."phone_deliveries" FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public."phone_deliveries" TO service_role;
+ALTER TABLE public."bank_accounts" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."sessions" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."carrier_profiles" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."carrier_drivers" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;

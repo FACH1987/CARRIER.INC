@@ -14,6 +14,14 @@ export const sessions = sqliteTable('sessions', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: integer('expires_at').notNull()
 }, (t) => [index('sessions_expiry_idx').on(t.expiresAt), index('sessions_user_idx').on(t.userId)]);
+export const bankAccounts = sqliteTable('bank_accounts', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  bankName: text('bank_name').notNull(), holderName: text('holder_name').notNull(),
+  accountType: text('account_type', { enum: ['ahorro', 'corriente'] }).notNull(),
+  currency: text('currency', { enum: ['NIO', 'USD'] }).notNull(),
+  encryptedNumber: text('encrypted_number').notNull(), lastFour: text('last_four').notNull(),
+  consentAt: text('consent_at').notNull(), updatedAt: text('updated_at').notNull()
+});
 export const authLimits = sqliteTable('auth_limits', {
   key: text('key').primaryKey(), attempts: integer('attempts').notNull(), expiresAt: integer('expires_at').notNull()
 }, (t) => [index('auth_limits_expiry_idx').on(t.expiresAt)]);

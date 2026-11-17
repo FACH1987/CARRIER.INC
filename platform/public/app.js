@@ -45,6 +45,7 @@ function setAccount(user) {
   document.querySelector('#admin-open').hidden = !user?.isAdmin;
   document.querySelector('#commissions-open').hidden = !user?.isAdmin;
   document.querySelector('#carrier-open').hidden = user?.role !== 'transportista';
+  document.querySelector('#bank-open').hidden = !user || !['empresa', 'transportista'].includes(user.role);
   if (!user) document.querySelector('#carrier-notice').hidden = true;
   document.querySelector('#access-gate').hidden = signedIn;
   document.querySelector('#load-board').hidden = !signedIn;
