@@ -37,7 +37,8 @@ test('local accounts, private carrier documents, verified dispatch and commissio
     compatibilityDate: '2026-05-15', compatibilityFlags: ['nodejs_compat'],
     d1Databases: ['DB'], d1Persist: false,
     r2Buckets: ['DOCUMENTS'], r2Persist: false,
-    bindings: { ADMIN_ACCOUNT_ID: adminId, ADMIN_SETUP_TOKEN: setupToken, ADMIN_SETUP_EMAIL: email, BANK_ACCOUNT_ENCRYPTION_KEY: '01'.repeat(32) }
+    bindings: { ADMIN_ACCOUNT_ID: adminId, ADMIN_SETUP_TOKEN: setupToken, ADMIN_SETUP_EMAIL: email, BANK_ACCOUNT_ENCRYPTION_KEY: '01'.repeat(32),
+      SUBSCRIPTION_BANK_ACCOUNT: JSON.stringify({ bank: 'Synthetic Bank', holder: 'Synthetic Company', number: '0000001234', type: 'corriente', currency: 'USD' }) }
   });
   t.after(async () => { await runtime.dispose(); });
   const db = await runtime.getD1Database('DB');
@@ -534,6 +535,28 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await api(settle, { method: 'POST', cookie: adminCookie, body: { reference: 'BANK-123', confirmReceived: true } })).status, 410);
       assert.equal((await db.prepare('select status from commissions where id = ?').bind(legacyInvoiceId).first()).status, 'pending');
       assert.equal((await api('/api/loads/' + financialLoad.id, { method: 'DELETE', cookie })).status, 409);
+      const subscriptions = '/api/subscriptions';
+      const requestPlan = (plan, session = cookie) => api(subscriptions, { method: 'POST', cookie: session, body: { action: 'request', plan } });
+      assert.equal((await requestPlan('elite')).status, 403);
+      const firstRequests = await Promise.all([requestPlan('negocio'), requestPlan('negocio')]);
+      const [firstMonth, repeatedRequest] = await Promise.all(firstRequests.map(result => result.json()));
+      assert.match(firstMonth.reference, /^[a-f0-9-]{36}$/);
+      assert.equal(firstMonth.reference, repeatedRequest.reference);
+      const beforePayment = await (await api(subscriptions, { cookie })).json();
+      assert.equal(beforePayment.active, null);
+      assert.equal(beforePayment.pending.bank.currency, 'USD');
+      const subscriptionPayment = { action: 'verify', reference: firstMonth.reference, bankReference: 'TEST-001', amountCents: 3000, currency: 'USD' };
+      const verifySubscription = (details, session = adminCookie) => api(subscriptions, { method: 'POST', cookie: session, body: details });
+      assert.equal((await verifySubscription(subscriptionPayment, cookie)).status, 403);
+      assert.equal((await verifySubscription({ ...subscriptionPayment, amountCents: 2999 })).status, 409);
+      assert.equal((await verifySubscription(subscriptionPayment)).status, 200);
+      const activeSubscription = (await (await api(subscriptions, { cookie })).json()).active;
+      assert.equal(activeSubscription.plan, 'negocio');
+      const renewal = await (await requestPlan('negocio')).json();
+      assert.notEqual(renewal.reference, firstMonth.reference);
+      assert.equal((await verifySubscription({ ...subscriptionPayment, reference: renewal.reference })).status, 409);
+      assert.equal((await verifySubscription({ ...subscriptionPayment, reference: renewal.reference, bankReference: 'TEST-002' })).status, 200);
+      assert.equal((await (await api(subscriptions, { cookie })).json()).upcoming.startsAt, activeSubscription.endsAt);
       await api('/api/auth/logout', { method: 'POST', cookie: adminCookie, body: {} });
       assert.equal((await api('/api/admin/users', { cookie: adminCookie })).status, 401);
     });

@@ -5,5 +5,5 @@ export function freightCents(pay: number) {
   return fareCents;
 }
 export function protectedFinancialHistory(id: string | SQLWrapper) {
-  return sql<boolean>`(exists (select 1 from loads where status <> 'disponible' and (owner_id = 'account:' || ${id} or carrier_id = ${id})) or exists (select 1 from commissions where payer_id = ${id} or carrier_id = ${id} or recorded_by = ${id}))`;
+  return sql<boolean>`(exists (select 1 from loads where status <> 'disponible' and (owner_id = 'account:' || ${id} or carrier_id = ${id})) or exists (select 1 from commissions where payer_id = ${id} or carrier_id = ${id} or recorded_by = ${id}) or exists (select 1 from subscription_payments where user_id = ${id} or verified_by = ${id}))`;
 }

@@ -2,6 +2,12 @@
 
 Aplicación web con API de cargas compartidas y Cloudflare D1.
 
+## Suscripciones por transferencia
+
+Desde **Planes → Gestionar suscripción**, la cuenta genera una referencia por mensualidad. El administrador consulta los abonos desde esa misma pantalla y verifica la referencia bancaria y el importe en USD. La primera mensualidad empieza al verificar el abono. Una renovación anticipada comienza al vencer el período vigente.
+
+Configurar `SUBSCRIPTION_BANK_ACCOUNT` en Sites con un objeto JSON que contenga `bank`, `holder`, `number`, `type` (`ahorro` o `corriente`) y `currency: "USD"`. Sin esa cuenta, la app no emite referencias de cobro. La verificación registra la vigencia del plan. Los cupos y beneficios anunciados en el catálogo requieren su implementación correspondiente.
+
 ## Desarrollo
 
 - `npm ci`

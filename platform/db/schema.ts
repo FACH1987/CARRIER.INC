@@ -1,4 +1,5 @@
 import { sqliteTable, text, real, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(), email: text('email').notNull().unique(),
   role: text('role', { enum: ['empresa', 'transportista'] }).notNull().default('empresa'),
@@ -14,6 +15,21 @@ export const sessions = sqliteTable('sessions', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: integer('expires_at').notNull()
 }, (t) => [index('sessions_expiry_idx').on(t.expiresAt), index('sessions_user_idx').on(t.userId)]);
+export const subscriptionPayments = sqliteTable('subscription_payments', {
+  reference: text('reference').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  plan: text('plan', { enum: ['negocio', 'corporativo', 'chofer-pro', 'elite'] }).notNull(),
+  amountCents: integer('amount_cents').notNull(),
+  createdAt: text('created_at').notNull(),
+  verifiedAt: text('verified_at'),
+  verifiedBy: text('verified_by').references(() => users.id),
+  bankReference: text('bank_reference').unique(),
+  startsAt: text('starts_at'),
+  endsAt: text('ends_at'),
+}, (t) => [
+  uniqueIndex('subscription_one_pending').on(t.userId).where(sql`${t.verifiedAt} IS NULL`),
+  index('subscription_user_period').on(t.userId, t.endsAt),
+]);
 export const bankAccounts = sqliteTable('bank_accounts', {
   userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   bankName: text('bank_name').notNull(), holderName: text('holder_name').notNull(),

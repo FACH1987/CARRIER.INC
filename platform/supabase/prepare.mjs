@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-export const tableOrder = ['users', 'bank_accounts', 'auth_limits', 'sessions', 'carrier_profiles', 'carrier_drivers', 'carrier_vehicles', 'carrier_documents', 'loads', 'commissions', 'carrier_notice_reads', 'load_notice_reads', 'phone_deliveries'];
+export const tableOrder = ['users', 'bank_accounts', 'auth_limits', 'sessions', 'carrier_profiles', 'carrier_drivers', 'carrier_vehicles', 'carrier_documents', 'loads', 'commissions', 'carrier_notice_reads', 'load_notice_reads', 'phone_deliveries', 'subscription_payments'];
 const quote = value => '"' + value.replaceAll('"', '""') + '"';
 const literal = value => {
   if (value === null) return 'NULL';
@@ -38,7 +38,11 @@ export function schemaSql() {
       for (const index of db.prepare(`PRAGMA index_list(${quote(table)})`).all()) {
         if (index.origin === 'pk') continue;
         const fields = db.prepare(`PRAGMA index_info(${quote(index.name)})`).all().map(column => quote(column.name));
-        statements.push(`CREATE ${index.unique ? 'UNIQUE ' : ''}INDEX ${quote(index.name)} ON public.${quote(table)} (${fields.join(', ')});`);
+        const predicate = index.partial
+          ? db.prepare("SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?").get(index.name).sql.match(/\sWHERE\s.+$/i)?.[0].replaceAll('`', '"')
+          : '';
+        if (index.partial && !predicate) throw new Error(`Missing predicate for ${index.name}`);
+        statements.push(`CREATE ${index.unique ? 'UNIQUE ' : ''}INDEX ${quote(index.name)} ON public.${quote(table)} (${fields.join(', ')})${predicate};`);
       }
       statements.push(`ALTER TABLE public.${quote(table)} ENABLE ROW LEVEL SECURITY;`, `REVOKE ALL ON public.${quote(table)} FROM PUBLIC, anon, authenticated;`, `GRANT SELECT, INSERT, UPDATE, DELETE ON public.${quote(table)} TO service_role;`);
     }

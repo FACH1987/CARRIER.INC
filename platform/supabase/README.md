@@ -6,7 +6,7 @@ Decisión del usuario: mantener Cloudflare D1 como base de datos activa. La migr
 
 ## Archivos preparados
 
-- `schema.sql`: las 13 tablas actuales, índices y relaciones para un destino **vacío**, con RLS y sin permisos para `anon` ni `authenticated`. La API del servidor autoriza las operaciones.
+- `schema.sql`: las 14 tablas actuales, índices y relaciones para un destino **vacío**, con RLS y sin permisos para `anon` ni `authenticated`. La API del servidor autoriza las operaciones.
 - `prepare.mjs`: genera el esquema desde las migraciones D1 y convierte un volcado SQL D1 propio en INSERT de PostgreSQL sin conexión a servicios. Rechaza tablas de negocio sin mapear, columnas faltantes y referencias rotas. No sobrescribe la salida ni imprime datos personales.
 - `../tests/supabase-preparation.test.mjs`: comprueba correspondencia del esquema y conservación de datos SMS, importes y hashes.
 - `migrations/202611130001_loads.sql`: preparación histórica de cargas solamente. **No aplicarla junto con `schema.sql`.** Si ya se aplicó, preparar una actualización específica o usar un destino de ensayo vacío; no borrar tablas con datos.
@@ -49,7 +49,7 @@ No ejecutar simultáneamente despachadores contra D1 y PostgreSQL. Conservar la 
 1. Elegir el proyecto de ensayo y configurar los secretos del servidor; nunca subir claves o volcados a Git.
 2. Implementar PostgreSQL para **todos** los consumidores de `getDb()`: autenticación, administración, expedientes, cargas, asignaciones, comisiones y SMS. El REST histórico de `db/supabase.ts` solo cubre cargas. Adaptar operaciones D1 `batch`, transacciones, `RETURNING`, conflictos e indicadores 0/1.
 3. Ejecutar las pruebas de integración contra PostgreSQL y una importación de ensayo. Las pruebas locales de preparación no sustituyen ejecutar el SQL en PostgreSQL/Supabase.
-4. Comparar las 13 tablas (sesiones de destino: cero), identificadores y relaciones. Conciliar cargas cerradas/vencidas, totales de comisiones por estado, pagos, preferencias y estados SMS. Verificar cada `object_key` no nulo contra R2.
+4. Comparar las 14 tablas (sesiones de destino: cero), identificadores y relaciones. Conciliar cargas cerradas/vencidas, totales de comisiones por estado, pagos, preferencias y estados SMS. Verificar cada `object_key` no nulo contra R2.
 5. Probar registro, inicio de sesión, administrador, privacidad entre cuentas, documentos, avisos, asignación/cierre del flete, comisión y pago. Probar retirada de consentimiento, cambio de teléfono, verificación y deduplicación con un proveedor simulado antes de una entrega real autorizada. Confirmar que los roles públicos no acceden a las tablas.
 6. Respaldar con escrituras y SMS detenidos, importar y repetir la conciliación. Solo entonces cambiar la configuración y desplegar la aplicación adaptada.
 
