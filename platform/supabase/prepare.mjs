@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-export const tableOrder = ['users', 'bank_accounts', 'auth_limits', 'sessions', 'carrier_profiles', 'carrier_drivers', 'carrier_vehicles', 'carrier_documents', 'loads', 'commissions', 'carrier_notice_reads', 'load_notice_reads', 'phone_deliveries', 'subscription_payments'];
+export const tableOrder = ['users', 'bank_accounts', 'auth_limits', 'sessions', 'carrier_profiles', 'carrier_drivers', 'carrier_vehicles', 'carrier_documents', 'loads', 'commissions', 'carrier_notice_reads', 'load_notice_reads', 'phone_deliveries', 'subscription_payments', 'load_publications', 'load_quotes'];
 const quote = value => '"' + value.replaceAll('"', '""') + '"';
 const literal = value => {
   if (value === null) return 'NULL';

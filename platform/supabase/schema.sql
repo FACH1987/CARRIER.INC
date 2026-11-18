@@ -220,6 +220,28 @@ CREATE UNIQUE INDEX "subscription_payments_bank_reference_unique" ON public."sub
 ALTER TABLE public."subscription_payments" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public."subscription_payments" FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public."subscription_payments" TO service_role;
+CREATE TABLE public."load_publications" (
+  "load_id" text PRIMARY KEY NOT NULL,
+  "owner_id" text NOT NULL,
+  "created_at" text NOT NULL
+);
+CREATE INDEX "load_publications_owner_date" ON public."load_publications" ("owner_id", "created_at");
+ALTER TABLE public."load_publications" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public."load_publications" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."load_publications" TO service_role;
+CREATE TABLE public."load_quotes" (
+  "id" text PRIMARY KEY NOT NULL,
+  "load_id" text NOT NULL,
+  "carrier_id" text NOT NULL,
+  "amount_cents" bigint NOT NULL,
+  "created_at" text NOT NULL,
+  "priority" bigint NOT NULL
+);
+CREATE INDEX "load_quotes_carrier_date" ON public."load_quotes" ("carrier_id", "created_at");
+CREATE UNIQUE INDEX "load_quotes_carrier_load" ON public."load_quotes" ("carrier_id", "load_id");
+ALTER TABLE public."load_quotes" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public."load_quotes" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."load_quotes" TO service_role;
 ALTER TABLE public."bank_accounts" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."sessions" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."carrier_profiles" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
@@ -241,4 +263,5 @@ ALTER TABLE public."load_notice_reads" ADD FOREIGN KEY ("user_id") REFERENCES pu
 ALTER TABLE public."phone_deliveries" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."subscription_payments" ADD FOREIGN KEY ("verified_by") REFERENCES public."users" ("id") ON DELETE NO ACTION;
 ALTER TABLE public."subscription_payments" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE NO ACTION;
+ALTER TABLE public."load_quotes" ADD FOREIGN KEY ("carrier_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 COMMIT;

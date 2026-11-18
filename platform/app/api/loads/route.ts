@@ -1,13 +1,14 @@
 import { usesSupabase } from '../../../db/supabase';
 import { getDb } from '../../../db';
 import { loads, users, carrierVehicles, carrierDrivers } from '../../../db/schema';
-import { and, desc, eq, gte, count, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 import { currentAccount } from '../../../lib/account-auth';
 import { carrierDossier, requireCarrierReady } from '../../../lib/carrier-compliance';
 import { AuthError } from '../../../lib/account-auth';
 import { equipmentTypes } from '../../../lib/equipment';
+import { activePlan, nicaraguaMonthStart } from '../../../lib/subscriptions';
 
 export const dynamic = 'force-dynamic';
 const dayInNicaragua = () => {
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
         canDelete: available, canAssign: available && schema.shape.pay.safeParse(load.pay).success,
         hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId) };
     });
-    return json({ loads: visible, signedIn: Boolean(user), user });
+    return json({ loads: visible, plan: user.role === 'transportista' ? await activePlan(user.id) : null, signedIn: Boolean(user), user });
   } catch (error) {
     console.error('No se pudieron consultar las cargas', error);
     return json({ error: 'No pudimos consultar las cargas. Intenta de nuevo.' }, 503);
@@ -79,13 +80,22 @@ export async function POST(request: Request) {
     let parsed;
     try { parsed = schema.safeParse(JSON.parse(raw)); } catch { return json({ error: 'La solicitud no es válida.' }, 400); }
     if (!parsed.success) return json({ error: 'Revisa los datos e indica el flete en USD.' }, 400);
-    const since = new Date(Date.now() - 86400000).toISOString();
-    const recentCount = (await getDb().select({ value: count() }).from(loads).where(and(eq(loads.ownerId, ownerId), gte(loads.createdAt, since))))[0].value;
-    if (recentCount >= 10) return json({ error: 'Puedes publicar hasta 10 cargas en 24 horas. Intenta mañana.' }, 429);
     const details = parsed.data;
     const now = new Date().toISOString();
     const load = { ...details, id: crypto.randomUUID(), createdAt: now, status: 'disponible' as const };
-    await getDb().insert(loads).values({ ...load, ownerId, feeRateBps: 0 });
+    const plan = await activePlan(user.id, now);
+    const limit = user.role === 'empresa' ? (plan === 'corporativo' ? null : plan === 'negocio' ? 25 : 3) : 10;
+    const since = user.role === 'empresa' ? nicaraguaMonthStart() : new Date(Date.parse(now) - 86400000).toISOString();
+    const [published] = await getDb().all<{ id: string }>(sql`
+      INSERT INTO loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, currency, company, email, created_at, status, fee_rate_bps)
+      SELECT ${load.id}, ${ownerId}, ${load.origin}, ${load.destination}, ${load.pickupDate}, ${load.equipment},
+        ${load.weight}, ${load.pay}, ${load.currency}, ${load.company}, ${load.email}, ${now}, 'disponible', 0
+      WHERE ${limit === null ? sql`1` : sql`(SELECT count(*) FROM load_publications WHERE owner_id = ${ownerId} AND created_at >= ${since}) < ${limit}`}
+      RETURNING id
+    `);
+    if (!published) return json({ error: user.role === 'empresa'
+      ? `Tu plan permite ${limit} publicaciones por mes. Consulta los planes para ampliar tu cupo.`
+      : 'Puedes publicar hasta 10 cargas en 24 horas.' }, 429);
     return json({ load: { ...load, canDelete: true, canAssign: true, isOwner: true, isCarrier: false } }, 201);
   } catch (error) {
     console.error('No se pudo publicar la carga', error);

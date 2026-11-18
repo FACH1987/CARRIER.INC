@@ -12,7 +12,7 @@ export const requirements = {
   vehicle: ['circulation', 'vehicle_insurance', 'inspection', 'emissions', 'road_tax', 'weights', 'operation']
 } as const;
 export const documentLabels: Record<string, string> = {
-  identity: 'Cédula / identificación (ambos lados)', license: 'Licencia de conducir (ambos lados y categorías)',
+  identity: 'Cédula / identificación (ambos lados)', license: 'Licencia de conducir (ambos lados y categorías)', police_record: 'Récord de Policía (Elite)',
   driver_insurance: 'Seguro de licencia del conductor', ruc: 'RUC del operador', company_registration: 'Constitución / registro del operador',
   operation: 'Autorización / documento de operación aplicable', circulation: 'Circulación del vehículo', vehicle_insurance: 'Carné / póliza de seguro del vehículo',
   inspection: 'Inspección técnico-mecánica', emissions: 'Control de emisiones', road_tax: 'Rodamiento', weights: 'Certificado de pesos y dimensiones', special_permit: 'Permiso de carga especializada'
@@ -40,13 +40,15 @@ export async function carrierDossier(userId: string, day = todayNI()) {
   const profileReady = Boolean(profile && profileChecklist.every(item => item.valid));
   const driverRows = drivers.map(driver => {
     const checklist = checked('driver', driver.id, requirements.driver);
-    return { ...driver, categories: JSON.parse(driver.categories) as string[], checklist, ready: checklist.every(item => item.valid) };
+    const [policeRecord] = checked('driver', driver.id, ['police_record']);
+    return { ...driver, categories: JSON.parse(driver.categories) as string[], checklist: [...checklist, policeRecord],
+      policeVerified: policeRecord.valid && policeRecord.document?.status === 'approved', ready: checklist.every(item => item.valid) };
   });
   const vehicleRows = vehicles.map(vehicle => {
     const driver = driverRows.find(row => row.id === vehicle.driverId);
     const categoryError = vehicleCategoryError(vehicle.requiredCategory, driver?.categories || [], vehicle.capacityKg, vehicle.equipment);
     const checklist = checked('vehicle', vehicle.id, [...requirements.vehicle, ...(vehicle.requiredCategory === '7' ? ['special_permit'] : [])]);
-    return { ...vehicle, driverName: driver?.name, categoryError, checklist, ready: profileReady && Boolean(driver?.ready) && !categoryError && checklist.every(item => item.valid) };
+    return { ...vehicle, driverName: driver?.name, policeVerified: Boolean(driver?.policeVerified), categoryError, checklist, ready: profileReady && Boolean(driver?.ready) && !categoryError && checklist.every(item => item.valid) };
   });
   return { profile: profile || null, profileChecklist, drivers: driverRows, vehicles: vehicleRows, ready: profileReady && vehicleRows.some(row => row.ready), day, documentLabels, exemptable, timeless, evaluation: { ruleset: RULESET, sources: legalSources, scope: 'Comprobación automática de presencia, fechas declaradas y compatibilidad básica de categorías. No incluye lectura del contenido de los archivos ni autenticación ante autoridades.' } };
 }

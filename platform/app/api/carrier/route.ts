@@ -1,4 +1,4 @@
-import { and, eq, count } from 'drizzle-orm';
+import { and, eq, count, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '../../../db';
 import { users, carrierProfiles, carrierDrivers, carrierVehicles } from '../../../db/schema';
@@ -6,6 +6,7 @@ import { currentAccount, readAuthJson, responseJson, authFailure, AuthError } fr
 import { carrierDossier, categories } from '../../../lib/carrier-compliance';
 import { vehicleCategoryError } from '../../../lib/document-rules';
 import { equipmentTypes } from '../../../lib/equipment';
+import { activePlan } from '../../../lib/subscriptions';
 export const dynamic = 'force-dynamic';
 const name = z.string().trim().min(2).max(120);
 const schema = z.discriminatedUnion('action', [
@@ -47,12 +48,17 @@ export async function POST(request: Request) {
         if (!driver || !JSON.parse(driver.categories).includes(data.requiredCategory)) throw new AuthError('El conductor debe declarar la categoría requerida por este vehículo.');
         const categoryError = vehicleCategoryError(data.requiredCategory, JSON.parse(driver.categories), data.capacityKg, data.equipment);
         if (categoryError) throw new AuthError(categoryError);
-        const [total] = await db.select({ n: count() }).from(carrierVehicles).where(eq(carrierVehicles.userId, account.id));
-        if (total.n >= (profile.kind === 'independiente' ? 1 : 50)) throw new AuthError('Límite de vehículos alcanzado.', 409);
         const duplicate = await db.select({ id: carrierVehicles.id }).from(carrierVehicles).where(and(eq(carrierVehicles.userId, account.id), eq(carrierVehicles.plate, data.plate)));
         if (duplicate.length) throw new AuthError('La placa ya está registrada en tu expediente.', 409);
-        const { action, ...details } = data;
-        await db.insert(carrierVehicles).values({ ...details, id, userId: account.id });
+        const limit = await activePlan(account.id) === 'elite' ? 3 : 1;
+        const [vehicle] = await db.all<{ id: string }>(sql`
+          INSERT INTO carrier_vehicles (id, user_id, driver_id, plate, description, equipment, capacity_kg, required_category)
+          SELECT ${id}, ${account.id}, ${data.driverId}, ${data.plate}, ${data.description}, ${data.equipment}, ${data.capacityKg}, ${data.requiredCategory}
+          WHERE (SELECT count(*) FROM carrier_vehicles WHERE user_id = ${account.id}) < ${limit}
+            AND NOT EXISTS (SELECT 1 FROM carrier_vehicles WHERE user_id = ${account.id} AND plate = ${data.plate})
+          RETURNING id
+        `);
+        if (!vehicle) throw new AuthError(`Tu plan admite hasta ${limit} vehículo(s) registrado(s), con placas distintas.`, 409);
       }
     }
     return responseJson({ saved: true, id }, 201);

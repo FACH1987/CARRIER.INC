@@ -301,8 +301,14 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const victimLogin = await api('/api/auth/login', { method: 'POST', body: { email: victimEmail, password } });
       assert.equal(victimLogin.status, 200);
       const victimCookie = cookieFrom(victimLogin);
-      const victimCargo = await api('/api/loads', { method: 'POST', cookie: victimCookie, body: { origin: 'A', destination: 'B', pickupDate: '2099-12-01', equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 5000, currency: 'USD', company: 'Temporary test account', email: victimEmail } });
+      const publishVictimCargo = () => api('/api/loads', { method: 'POST', cookie: victimCookie, body: { origin: 'A', destination: 'B', pickupDate: '2099-12-01', equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 5000, currency: 'USD', company: 'Temporary test account', email: victimEmail } });
+      const victimCargo = await publishVictimCargo();
       assert.equal(victimCargo.status, 201);
+      const otherPublications = await Promise.all([publishVictimCargo(), publishVictimCargo(), publishVictimCargo()]);
+      assert.deepEqual(otherPublications.map(result => result.status).sort(), [201, 201, 429]);
+      const firstPublished = (await victimCargo.json()).load;
+      assert.equal((await api('/api/loads/' + firstPublished.id, { method: 'DELETE', cookie: victimCookie })).status, 200);
+      assert.equal((await publishVictimCargo()).status, 429);
       const endpoint = '/api/admin/users/' + victimId;
       assert.equal((await api(endpoint, { method: 'DELETE' })).status, 401);
       assert.equal((await api(endpoint, { method: 'DELETE', cookie })).status, 403);
@@ -332,6 +338,10 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const createdVehicle = await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: vehicleData });
       assert.equal(createdVehicle.status, 201);
       const vehicleId = (await createdVehicle.json()).id;
+      assert.equal((await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { ...vehicleData, plate: 'M-TEST-002' } })).status, 409);
+      const eliteStart = new Date().toISOString();
+      await db.prepare("insert into subscription_payments (reference, user_id, plan, amount_cents, created_at, verified_at, starts_at, ends_at) values (?, ?, 'elite', 4000, ?, ?, ?, ?)")
+        .bind(randomUUID(), carrierAccount.id, eliteStart, eliteStart, eliteStart, new Date(Date.now() + 86400000).toISOString()).run();
       const secondVehicle = await api('/api/carrier', { method: 'POST', cookie: carrierSession, body: { ...vehicleData, plate: 'M-TEST-002' } });
       assert.equal(secondVehicle.status, 201);
       const independentId = randomUUID(), independentEmail = 'independent-' + suffix + '@example.com';
@@ -422,7 +432,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const review = (doc, session = adminCookie, overrides = {}) => api('/api/admin/documents/' + doc.id + '/review', { method: 'POST', cookie: session, body: { revision: doc.revision, status: 'approved', note: 'Reviewed isolated test fixture', attest: true, ...overrides } });
       assert.equal((await review(docs[0], carrierSession)).status, 403);
       assert.equal((await review(docs[0], adminCookie, { revision: randomUUID() })).status, 409);
-      for (const doc of docs) assert.equal((await review(doc)).status, 200);
+      for (const doc of docs.filter(item => item.type !== 'police_record')) assert.equal((await review(doc)).status, 200);
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
       dossier = await (await api('/api/carrier', { cookie: carrierSession })).json();
       assert.equal(dossier.ready, true);
@@ -444,6 +454,19 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const posted = await api('/api/loads', { method: 'POST', cookie, body: { ...freight, feeCents: 1 } });
       assert.equal(posted.status, 201);
       const financialLoad = (await posted.json()).load;
+      const reportUrl = base + '/api/loads/report?format=excel';
+      assert.equal((await runtime.dispatchFetch(reportUrl, { headers: { Cookie: cookie } })).status, 403);
+      const quotesPath = '/api/loads/' + financialLoad.id + '/quotes';
+      const makeOffer = () => api(quotesPath, { method: 'POST', cookie: carrierSession, body: { amountCents: 10005 } });
+      assert.equal((await makeOffer()).status, 403);
+      const policeRecord = (await (await api('/api/carrier', { cookie: carrierSession })).json()).drivers[0].checklist
+        .find(item => item.type === 'police_record').document;
+      assert.equal((await review(policeRecord)).status, 200);
+      assert.equal((await makeOffer()).status, 201);
+      assert.equal((await makeOffer()).status, 409);
+      assert.equal((await api(quotesPath, { cookie: carrierSession })).status, 403);
+      const quotes = await (await api(quotesPath, { cookie })).json();
+      assert.equal(quotes.quotes[0].priority, 2);
       const newCargoNotices = await (await api('/api/carrier/notifications', { cookie: carrierSession })).json();
       assert(newCargoNotices.loadAlerts.some(alert => alert.loadId === financialLoad.id && alert.load.email === email && alert.load.pay === 100.05));
       const cargoNotice = newCargoNotices.loadAlerts.find(alert => alert.loadId === financialLoad.id);
@@ -552,6 +575,10 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await verifySubscription(subscriptionPayment)).status, 200);
       const activeSubscription = (await (await api(subscriptions, { cookie })).json()).active;
       assert.equal(activeSubscription.plan, 'negocio');
+      const excelReport = await runtime.dispatchFetch(reportUrl, { headers: { Cookie: cookie } });
+      assert.equal(excelReport.status, 200);
+      assert.match(excelReport.headers.get('content-disposition'), /fletes\.xml/);
+      assert.match(await excelReport.text(), /100\.05/);
       const renewal = await (await requestPlan('negocio')).json();
       assert.notEqual(renewal.reference, firstMonth.reference);
       assert.equal((await verifySubscription({ ...subscriptionPayment, reference: renewal.reference })).status, 409);

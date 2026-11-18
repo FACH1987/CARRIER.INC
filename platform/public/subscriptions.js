@@ -64,6 +64,12 @@ function renderCustomer(data) {
   const freePlan = data.role === 'empresa' ? 'Inicial' : 'Arrancador';
   element('h2', 'Plan actual: ' + (data.active ? planNames[data.active.plan] : freePlan));
   if (data.active) element('p', 'Vigente hasta el ' + date(data.active.endsAt) + '.');
+  if (['negocio', 'corporativo'].includes(data.active?.plan)) {
+    const reports = element('p', '');
+    element('a', 'Descargar reporte para Excel', reports).href = '/api/loads/report?format=excel';
+    reports.append(' · ');
+    element('a', 'Abrir reporte para guardar en PDF', reports).href = '/api/loads/report?format=print';
+  }
   if (data.upcoming) element('p', 'Próxima mensualidad: ' + planNames[data.upcoming.plan] + ', del ' + date(data.upcoming.startsAt) + ' al ' + date(data.upcoming.endsAt) + '.');
   if (data.pending) {
     element('h3', 'Mensualidad pendiente de verificar');

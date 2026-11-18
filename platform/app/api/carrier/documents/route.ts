@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     try { params = new URLSearchParams(decodeURIComponent(request.headers.get('X-Document-Metadata') || '')); } catch { throw new AuthError('Metadatos inválidos.'); }
     const entityType = params.get('entityType') as 'profile' | 'driver' | 'vehicle';
     const entityId = params.get('entityId') || '', type = params.get('type') || '';
-    if (!['profile', 'driver', 'vehicle'].includes(entityType) || ![...requirements[entityType], ...(entityType === 'vehicle' ? ['special_permit'] : [])].includes(type)) throw new AuthError('Tipo de documento inválido.');
+    if (!['profile', 'driver', 'vehicle'].includes(entityType) || ![...requirements[entityType], ...(entityType === 'vehicle' ? ['special_permit'] : []), ...(entityType === 'driver' ? ['police_record'] : [])].includes(type)) throw new AuthError('Tipo de documento inválido.');
     const db = getDb();
     const entity = entityType === 'profile' ? await db.select({ id: carrierProfiles.userId }).from(carrierProfiles).where(and(eq(carrierProfiles.userId, account.id), eq(carrierProfiles.userId, entityId))) : entityType === 'driver' ? await db.select({ id: carrierDrivers.id }).from(carrierDrivers).where(and(eq(carrierDrivers.userId, account.id), eq(carrierDrivers.id, entityId))) : await db.select({ id: carrierVehicles.id }).from(carrierVehicles).where(and(eq(carrierVehicles.userId, account.id), eq(carrierVehicles.id, entityId)));
     if (!entity.length) throw new AuthError('Registro no encontrado.', 404);

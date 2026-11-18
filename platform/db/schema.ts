@@ -39,6 +39,11 @@ export const bankAccounts = sqliteTable('bank_accounts', {
   consentAt: text('consent_at').notNull(), shareForDirectTransfer: integer('share_for_direct_transfer', { mode: 'boolean' }).notNull().default(false),
   updatedAt: text('updated_at').notNull()
 });
+export const loadPublications = sqliteTable('load_publications', {
+  loadId: text('load_id').primaryKey(),
+  ownerId: text('owner_id').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (t) => [index('load_publications_owner_date').on(t.ownerId, t.createdAt)]);
 export const authLimits = sqliteTable('auth_limits', {
   key: text('key').primaryKey(), attempts: integer('attempts').notNull(), expiresAt: integer('expires_at').notNull()
 }, (t) => [index('auth_limits_expiry_idx').on(t.expiresAt)]);
@@ -47,6 +52,14 @@ export const carrierProfiles = sqliteTable('carrier_profiles', {
   kind: text('kind', { enum: ['independiente', 'flota'] }).notNull(),
   legalName: text('legal_name').notNull(), consentAt: text('consent_at').notNull()
 });
+export const loadQuotes = sqliteTable('load_quotes', {
+  id: text('id').primaryKey(),
+  loadId: text('load_id').notNull(),
+  carrierId: text('carrier_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  amountCents: integer('amount_cents').notNull(),
+  createdAt: text('created_at').notNull(),
+  priority: integer('priority').notNull(),
+}, (t) => [uniqueIndex('load_quotes_carrier_load').on(t.carrierId, t.loadId), index('load_quotes_carrier_date').on(t.carrierId, t.createdAt)]);
 export const carrierDrivers = sqliteTable('carrier_drivers', {
   id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(), categories: text('categories').notNull()

@@ -12,7 +12,7 @@
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=carrier-1">
     <link rel="stylesheet" href="plans.css">
-    <script src="app.js?v=quote-notice-1" defer></script>
+    <script src="app.js?v=plan-benefits-1" defer></script>
   <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
   <body>
     <header class="topbar">
@@ -151,7 +151,7 @@
         <header class="plans-intro">
           <h2 id="plans-title">Planes para empresas y transportistas</h2>
           <p>Publica tu primera carga o encuentra tu próximo viaje gratis. La empresa paga el flete directamente al transportista, sin comisión por viaje.</p>
-          <p class="plans-note">El registro gratuito está disponible. Los cupos y beneficios de las tablas corresponden al catálogo propuesto. Los requisitos del expediente vigente se aplican al registrarte.</p>
+          <p class="plans-note">Ya están disponibles los cupos de publicaciones y vehículos, las cotizaciones por plan, la revisión del Récord de Policía para Elite y los reportes de fletes para empresas suscritas. Los demás beneficios de las tablas están en preparación.</p>
           <a class="button button-light" href="subscriptions.html">Gestionar suscripción</a>
         </header>
         <section class="plans-group" aria-labelledby="plans-empresa">
@@ -253,11 +253,29 @@
       <form class="post-form" method="dialog">
         <h2 id="quote-notice-title">Acceso para cotizar</h2>
         <p id="quote-notice-message"></p>
-        <p class="account-help" id="quote-plan-status">La activación de planes y la verificación del Récord de Policía aún no están disponibles.</p>
+        <p class="account-help" id="quote-plan-status"><a href="carrier.html">Abrir Mi expediente</a> · <a href="subscriptions.html">Gestionar suscripción</a></p>
         <div class="dialog-actions">
           <button type="submit" class="button button-light" autofocus>Cerrar</button>
           <a class="button button-dark" href="#planes" id="quote-plans-link">Ver plan Elite</a>
         </div>
+      </form>
+    </dialog>
+    <dialog class="post-dialog account-dialog" id="quote-dialog" aria-labelledby="quote-title">
+      <form class="post-form" id="quote-form">
+        <h2 id="quote-title">Cotizar flete</h2>
+        <label class="form-field"><span id="quote-amount-label">Importe ofrecido</span><input name="amount" type="number" min="1" max="1000000" step="0.01" required></label>
+        <p id="quote-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button class="button button-light" type="button" id="quote-cancel">Cancelar</button>
+          <button class="button button-dark" type="submit">Enviar cotización</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog class="post-dialog account-dialog" id="quotes-list" aria-labelledby="quotes-title">
+      <form class="post-form" method="dialog">
+        <h2 id="quotes-title">Cotizaciones recibidas</h2>
+        <ul id="quotes-results"></ul>
+        <button class="button button-light" type="submit">Cerrar</button>
       </form>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
