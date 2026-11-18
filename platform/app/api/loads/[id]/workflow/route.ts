@@ -10,8 +10,8 @@ import { chatPublicName, loadChatParticipants } from '../../../../../lib/load-ch
 
 export const dynamic = 'force-dynamic';
 const actionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('options'), carrierId: z.string().uuid().optional(), carrierEmail: z.string().trim().email().max(120).toLowerCase().optional() }),
-  z.object({ action: z.literal('assign'), carrierId: z.string().uuid().optional(), carrierEmail: z.string().trim().email().max(120).toLowerCase().optional(), vehicleId: z.string().uuid() }),
+  z.object({ action: z.literal('options'), carrierId: z.string().uuid() }),
+  z.object({ action: z.literal('assign'), carrierId: z.string().uuid(), vehicleId: z.string().uuid() }),
   z.object({ action: z.enum(['accept', 'reject', 'cancel_assignment', 'deliver', 'complete']) })
 ]);
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -34,13 +34,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (data.action === 'assign' || data.action === 'options') {
       if (!owner) throw new AuthError('Solo quien publicó la carga puede asignarla.', 403);
       if (load.status !== 'disponible') throw new AuthError('La carga ya no está disponible para asignar.', 409);
-      if (!data.carrierId && !data.carrierEmail) throw new AuthError('Selecciona un transportista de esta carga.', 400);
-      const match = data.carrierId ? eq(users.id, data.carrierId) : eq(users.email, data.carrierEmail!);
-      const [candidate] = await db.select({ id: users.id, name: users.name }).from(users).where(and(match, eq(users.role, 'transportista'))).limit(1);
-      if (!candidate || candidate.id === account.id || withAdminAccess(candidate).isAdmin) throw new AuthError('Selecciona otro usuario registrado como transportista.', 400);
-      if (data.carrierId && !(await loadChatParticipants(load)).some(participant => participant.id === candidate.id)) {
+      if (!(await loadChatParticipants(load)).some(participant => participant.id === data.carrierId)) {
         throw new AuthError('El transportista debe escribir por chat o cotizar esta carga.', 403);
       }
+      const [candidate] = await db.select({ id: users.id, name: users.name }).from(users)
+        .where(and(eq(users.id, data.carrierId), eq(users.role, 'transportista'))).limit(1);
+      if (!candidate || candidate.id === account.id || withAdminAccess(candidate).isAdmin) throw new AuthError('Selecciona otro usuario registrado como transportista.', 400);
       const day = load.pickupDate > todayNI() ? load.pickupDate : todayNI();
       if (data.action === 'options') {
         const dossier = await carrierDossier(candidate.id, day);

@@ -54,7 +54,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await api('/api/auth/register', { method: 'POST', body: { name: 'Test', email, password }, headers: { Origin: 'https://other.example' } })).status, 403);
     });
     await t.test('creates a local account and an HttpOnly session without leaking credentials', async () => {
-      const response = await api('/api/auth/register', { method: 'POST', body: { name: 'Local account test', email: email.toUpperCase(), password } });
+      const response = await api('/api/auth/register', { method: 'POST', body: { name: 'Local account test', email: email.toUpperCase(), password, phone: '+505 2222 3456' } });
       assert.equal(response.status, 201);
       cookie = cookieFrom(response);
       assert(cookie);
@@ -68,6 +68,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(result.user.role, 'empresa');
       assert(!JSON.stringify(result).includes(password));
       assert(!('passwordHash' in result.user));
+      assert(!('phone' in result.user));
       const stored = await db.prepare('select password_hash from users where email = ?').bind(email).first();
       assert.match(stored.password_hash, /^scrypt-v1\$/);
       assert.notEqual(stored.password_hash, password);
@@ -240,6 +241,13 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await loggedIn.json()).user.role, 'administrador');
       assert.equal((await loggedIn.json()).user.name, 'Administrador de Carrier.INC');
       const adminCookie = cookieFrom(loggedIn);
+      const contactSearch = '/api/admin/users?q=' + encodeURIComponent('+505 2222-3456');
+      assert.equal((await api(contactSearch, { cookie })).status, 403);
+      const contacts = await (await api(contactSearch, { cookie: adminCookie })).json();
+      assert.equal(contacts.users.length, 1);
+      assert.equal(contacts.users[0].email, email);
+      assert.equal(contacts.users[0].phone, '+50522223456');
+      assert.equal(contacts.users[0].phoneVerifiedAt, null);
       const bankOwner = await db.prepare('select id from users where email = ?').bind(email).first();
       const bankUrl = '/api/bank-account?userId=' + bankOwner.id;
       assert.equal((await api('/api/bank-account', { cookie: adminCookie })).status, 403);
@@ -497,18 +505,19 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.deepEqual((await options.json()).vehicles.map(v => v.id), [vehicleId]);
       await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(afterDays(2), newLicense.id).run();
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 200);
-      assert.deepEqual((await (await act('options', cookie, { carrierEmail: carrierAccount.email })).json()).vehicles, []);
-      assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email })).status, 403);
+      assert.deepEqual((await (await act('options', cookie, { carrierId: carrierAccount.id })).json()).vehicles, []);
+      assert.equal((await act('assign', cookie, { carrierId: carrierAccount.id })).status, 403);
       await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(metadata.expiresAt, newLicense.id).run();
-      assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email, vehicleId: (await secondVehicle.json()).id })).status, 403);
+      assert.equal((await act('assign', cookie, { carrierId: carrierAccount.id, vehicleId: (await secondVehicle.json()).id })).status, 403);
       assert.equal((await act('complete')).status, 409);
-      assert.equal((await act('assign', carrierSession, { carrierEmail: carrierAccount.email })).status, 403);
-      assert.equal((await act('assign', cookie, { carrierEmail: email })).status, 400);
-      assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email })).status, 200);
+      assert.equal((await act('assign', carrierSession, { carrierId: carrierAccount.id })).status, 403);
+      assert.equal((await act('assign', cookie, { carrierId: randomUUID() })).status, 403);
+      assert.equal((await act('options', cookie, { carrierEmail: carrierAccount.email })).status, 400);
+      assert.equal((await act('assign', cookie, { carrierId: carrierAccount.id })).status, 200);
       assert.equal((await act('deliver', carrierSession)).status, 409);
       assert.equal((await act('reject', carrierSession)).status, 200);
       assert.equal((await db.prepare('select count(*) as n from commissions').first()).n, 0);
-      assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email })).status, 200);
+      assert.equal((await act('assign', cookie, { carrierId: carrierAccount.id })).status, 200);
       assert.equal((await act('accept', cookie)).status, 403);
       assert.equal((await act('accept', carrierSession)).status, 200);
       const gpsPath = '/api/loads/' + financialLoad.id + '/position';

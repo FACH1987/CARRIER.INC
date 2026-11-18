@@ -114,12 +114,14 @@ function setAuthMode(mode) {
   updatePhoneField();
 }
 function updatePhoneField() {
-  const needed = authMode === 'register' && authForm.elements.namedItem('role').value === 'transportista';
-  document.querySelector('#auth-phone-field').hidden = !needed;
-  document.querySelector('#auth-sms-field').hidden = !needed;
-  authForm.elements.namedItem('phone').disabled = !needed;
-  authForm.elements.namedItem('phone').required = needed;
-  authForm.elements.namedItem('smsConsent').disabled = !needed;
+  const registering = authMode === 'register';
+  const carrier = registering && authForm.elements.namedItem('role').value === 'transportista';
+  document.querySelector('#auth-phone-field').hidden = !registering;
+  document.querySelector('#auth-phone-label').textContent = carrier ? 'Teléfono privado (+505)' : 'Teléfono privado de la empresa (+505, opcional)';
+  document.querySelector('#auth-sms-field').hidden = !carrier;
+  authForm.elements.namedItem('phone').disabled = !registering;
+  authForm.elements.namedItem('phone').required = carrier;
+  authForm.elements.namedItem('smsConsent').disabled = !carrier;
 }
 authForm.elements.namedItem('role').addEventListener('change', updatePhoneField);
 function openAuth(mode = 'login', publishing = false) {
@@ -886,8 +888,12 @@ authForm.addEventListener('submit', async (event) => {
   if (!authForm.reportValidity()) return;
   const data = new FormData(authForm);
   const payload = { email: String(data.get('email')).trim(), password: String(data.get('password')) };
-  if (authMode === 'register') { payload.name = String(data.get('name')).trim(); payload.role = String(data.get('role')); }
-  if (authMode === 'register' && payload.role === 'transportista') { payload.phone = String(data.get('phone')).trim(); payload.smsConsent = data.has('smsConsent'); }
+  if (authMode === 'register') {
+    payload.name = String(data.get('name')).trim();
+    payload.role = String(data.get('role'));
+    payload.phone = String(data.get('phone') || '').trim();
+    payload.smsConsent = payload.role === 'transportista' && data.has('smsConsent');
+  }
   authBusy = true;
   const button = document.querySelector('#auth-submit');
   button.disabled = true;

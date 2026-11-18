@@ -10,7 +10,7 @@ import { AuthError, authFailure, checkAuthLimit, readAuthJson, responseJson, sta
 const emailSchema = z.string().trim().email().max(120).transform(value => value.toLowerCase());
 const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128) });
 const registerSchema = z.object({ email: emailSchema, password: z.string().min(12).max(128), name: z.string().trim().min(2).max(80), role: z.enum(['empresa', 'transportista']).default('empresa'), phone: z.string().max(30).optional(), smsConsent: z.boolean().default(false) }).superRefine((data, ctx) => {
-  if (data.role === 'transportista' && !normalizePhone(data.phone || '')) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa un teléfono válido de Nicaragua.', path: ['phone'] });
+  if ((data.role === 'transportista' || data.phone?.trim()) && !normalizePhone(data.phone || '')) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Ingresa un teléfono válido de Nicaragua.', path: ['phone'] });
 });
 
 export async function register(request: Request) {
@@ -26,7 +26,7 @@ export async function register(request: Request) {
     if (existing) throw new AuthError('No se pudo crear la cuenta con ese correo. Si ya tienes una cuenta, inicia sesión.', 409);
     const account = { id: crypto.randomUUID(), name: data.name, email: data.email, role: data.role };
     const sms = data.role === 'transportista' && data.smsConsent;
-    await db.insert(users).values({ ...account, phone: data.role === 'transportista' ? normalizePhone(data.phone!) : null, phoneChannel: sms ? 'sms' : 'none', notifyLoads: sms, notifyDocuments: sms, phoneConsentAt: sms ? new Date().toISOString() : null, passwordHash: await hashPassword(data.password), createdAt: new Date().toISOString() });
+    await db.insert(users).values({ ...account, phone: normalizePhone(data.phone || ''), phoneChannel: sms ? 'sms' : 'none', notifyLoads: sms, notifyDocuments: sms, phoneConsentAt: sms ? new Date().toISOString() : null, passwordHash: await hashPassword(data.password), createdAt: new Date().toISOString() });
     return responseJson({ user: withAdminAccess(account), onboardingRequired: data.role === 'transportista' }, 201, await startSession(request, account.id));
   } catch (error) { return authFailure(error); }
 }
