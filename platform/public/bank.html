@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Cuenta bancaria · Carrier.INC</title><link rel="icon" href="brand-emblem.png"><link rel="stylesheet" href="styles.css?v=bank-1"><link rel="stylesheet" href="admin.css"><script src="bank.js?v=1" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Cuenta bancaria · Carrier.INC</title><link rel="icon" href="brand-emblem.png"><link rel="stylesheet" href="styles.css?v=bank-1"><link rel="stylesheet" href="admin.css"><script src="bank.js?v=usd-1" defer></script></head>
 <body>
   <header class="topbar"><a class="brand" href="market.html"><img class="brand-mark brand-logo" src="brand-emblem.png" alt="Güegüense Digital" width="50" height="44"><span class="brand-wordmark">Carrier<span class="brand-accent">.INC</span></span></a><a class="button button-outline button-small" href="market.html">Volver a las cargas</a></header>
   <main class="admin-layout">
@@ -16,11 +16,12 @@
           <label class="form-field"><span>Banco en Nicaragua</span><input name="bankName" required minlength="2" maxlength="120" placeholder="Nombre del banco"></label>
           <label class="form-field"><span>Nombre del titular</span><input name="holderName" required minlength="2" maxlength="120" autocomplete="name"></label>
           <label class="form-field"><span>Tipo de cuenta</span><select name="accountType" required><option value="ahorro">Ahorro</option><option value="corriente">Corriente</option></select></label>
-          <label class="form-field"><span>Moneda de la cuenta</span><select name="currency" required><option value="NIO">Córdobas (NIO)</option><option value="USD">Dólares (USD)</option></select></label>
+          <label class="form-field"><span>Moneda de la cuenta</span><select name="currency" required><option value="USD">Dólares (USD)</option><option value="NIO">Córdobas (NIO)</option></select></label>
           <label class="form-field"><span>Número de cuenta bancaria</span><input name="accountNumber" required minlength="6" maxlength="50" autocomplete="off" spellcheck="false" aria-describedby="bank-number-help"></label>
         </div>
         <p id="bank-number-help" class="account-help">Escribe el número completo al registrar o reemplazar la cuenta. Se admiten letras y números; se ignoran espacios y guiones. Verifica los datos directamente con tu banco. La moneda de esta cuenta no cambia el valor ni la moneda del flete.</p>
         <label class="form-note"><input name="consent" type="checkbox" required> Confirmo que tengo autorización para usar esta cuenta y permito que Carrier.INC y su administrador consulten estos datos para gestionar transferencias manuales.</label>
+        <label class="form-note" id="bank-share" hidden><input name="shareForDirectTransfer" type="checkbox"> Autorizo compartir esta cuenta con las empresas que contrataron mis fletes, una vez que confirmen la entrega, para que me paguen por transferencia directa.</label>
         <button type="submit" class="button button-dark">Guardar cuenta bancaria</button>
         <button id="bank-delete" type="button" class="button button-light" hidden>Eliminar cuenta guardada</button>
       </form>

@@ -1,14 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '../../../db';
-import { bankAccounts, users } from '../../../db/schema';
+import { bankAccounts, loads, users } from '../../../db/schema';
 import { AuthError, authFailure, currentAccount, readAuthJson, requireSameOrigin, responseJson } from '../../../lib/account-auth';
 import { withAdminAccess } from '../../../lib/admin-policy';
 import { decryptBankNumber, encryptBankNumber } from '../../../lib/bank-account-security';
+import { freightQuote } from '../../../lib/billing';
 
 export const dynamic = 'force-dynamic';
 const text = z.string().trim().min(2).max(120);
-const saveSchema = z.object({ action: z.literal('save'), bankName: text, holderName: text, accountType: z.enum(['ahorro', 'corriente']), currency: z.enum(['NIO', 'USD']), accountNumber: z.string().max(50).transform(value => value.replace(/[\s-]/g, '').toUpperCase()).pipe(z.string().regex(/^[A-Z0-9]{6,34}$/)), consent: z.literal(true) });
+const saveSchema = z.object({ action: z.literal('save'), bankName: text, holderName: text, accountType: z.enum(['ahorro', 'corriente']), currency: z.enum(['NIO', 'USD']), accountNumber: z.string().max(50).transform(value => value.replace(/[\s-]/g, '').toUpperCase()).pipe(z.string().regex(/^[A-Z0-9]{6,34}$/)), consent: z.literal(true), shareForDirectTransfer: z.boolean().default(false) });
 
 async function access(request: Request) {
   const account = await currentAccount(request);
@@ -26,13 +27,31 @@ export async function GET(request: Request) {
   try {
     const { userId, owner, readOnly } = await access(request);
     const [row] = await getDb().select().from(bankAccounts).where(eq(bankAccounts.userId, userId));
-    return responseJson({ owner, readOnly, bankAccount: row ? { bankName: row.bankName, holderName: row.holderName, accountType: row.accountType, currency: row.currency, maskedNumber: '•••• ' + row.lastFour, updatedAt: row.updatedAt } : null, transfersAutomatic: false });
+    return responseJson({ owner, readOnly, bankAccount: row ? { bankName: row.bankName, holderName: row.holderName, accountType: row.accountType, currency: row.currency, maskedNumber: '•••• ' + row.lastFour, shareForDirectTransfer: row.shareForDirectTransfer, updatedAt: row.updatedAt } : null, transfersAutomatic: false });
   } catch (error) { return authFailure(error); }
 }
 export async function POST(request: Request) {
   try {
-    const { userId, readOnly } = await access(request);
     const body = await readAuthJson(request);
+    const directTransfer = z.object({ action: z.literal('direct-transfer'), loadId: z.string().uuid() }).safeParse(body);
+    if (directTransfer.success) {
+      const account = await currentAccount(request);
+      if (!account) throw new AuthError('Inicia sesión para consultar los datos de pago.', 401);
+      if (account.role !== 'empresa') throw new AuthError('Solo la empresa contratante puede consultar los datos de pago.', 403);
+      const [payment] = await getDb().select({ bank: bankAccounts, pay: loads.pay, rate: loads.feeRateBps, currency: loads.currency })
+        .from(loads).innerJoin(bankAccounts, eq(loads.carrierId, bankAccounts.userId))
+        .where(and(eq(loads.id, directTransfer.data.loadId), eq(loads.ownerId, `account:${account.id}`),
+          eq(loads.status, 'finalizada'), eq(bankAccounts.shareForDirectTransfer, true))).limit(1);
+      if (!payment) throw new AuthError('Los datos de transferencia aún no están disponibles para esta carga.', 404);
+      const { bank } = payment;
+      if (bank.currency !== payment.currency) throw new AuthError(`Pide al transportista que vincule una cuenta en ${payment.currency}, la moneda acordada para este flete.`, 409);
+      return responseJson({
+        bankName: bank.bankName, holderName: bank.holderName, accountType: bank.accountType,
+        accountNumber: decryptBankNumber(bank.encryptedNumber, bank.userId),
+        fareCents: freightQuote(payment.pay, payment.rate).fareCents, currency: payment.currency,
+      });
+    }
+    const { userId, owner, readOnly } = await access(request);
     const reveal = z.object({ action: z.literal('reveal') }).safeParse(body);
     if (reveal.success) {
       const [row] = await getDb().select().from(bankAccounts).where(eq(bankAccounts.userId, userId));
@@ -43,7 +62,7 @@ export async function POST(request: Request) {
     const parsed = saveSchema.safeParse(body);
     if (!parsed.success) throw new AuthError('Revisa el banco, titular, tipo, moneda, número de cuenta y autorización.');
     const data = parsed.data, now = new Date().toISOString();
-    const record = { bankName: data.bankName, holderName: data.holderName, accountType: data.accountType, currency: data.currency, encryptedNumber: encryptBankNumber(data.accountNumber, userId), lastFour: data.accountNumber.slice(-4), consentAt: now, updatedAt: now };
+    const record = { bankName: data.bankName, holderName: data.holderName, accountType: data.accountType, currency: data.currency, encryptedNumber: encryptBankNumber(data.accountNumber, userId), lastFour: data.accountNumber.slice(-4), consentAt: now, updatedAt: now, shareForDirectTransfer: owner.role === 'transportista' && data.shareForDirectTransfer };
     await getDb().insert(bankAccounts).values({ userId, ...record }).onConflictDoUpdate({ target: bankAccounts.userId, set: record });
     return responseJson({ saved: true, transfersAutomatic: false });
   } catch (error) { return authFailure(error); }

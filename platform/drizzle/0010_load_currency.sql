@@ -1,0 +1,1 @@
+ALTER TABLE `loads` ADD `currency` text DEFAULT 'NIO' NOT NULL;

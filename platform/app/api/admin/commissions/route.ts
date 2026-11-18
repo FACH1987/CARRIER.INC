@@ -19,11 +19,13 @@ export async function GET(request: Request) {
     const carrier = alias(users, 'carrier');
     const rows = await db.select({ id: commissions.id, loadId: commissions.loadId, company: loads.company, origin: loads.origin, destination: loads.destination,
       payerName: users.name, payerEmail: users.email, carrierName: carrier.name, fareCents: commissions.fareCents, rateBps: commissions.rateBps, amountCents: commissions.amountCents,
-      status: commissions.status, createdAt: commissions.createdAt, paidAt: commissions.paidAt, paymentReference: commissions.paymentReference })
+      status: commissions.status, createdAt: commissions.createdAt, paidAt: commissions.paidAt, paymentReference: commissions.paymentReference, currency: loads.currency })
       .from(commissions).innerJoin(loads, eq(commissions.loadId, loads.id)).innerJoin(users, eq(commissions.payerId, users.id)).innerJoin(carrier, eq(commissions.carrierId, carrier.id))
       .where(filter).orderBy(desc(commissions.createdAt), desc(commissions.id)).limit(25).offset((page - 1) * 25);
     const [matched] = await db.select({ total: count() }).from(commissions).innerJoin(loads, eq(commissions.loadId, loads.id)).innerJoin(users, eq(commissions.payerId, users.id)).where(filter);
-    const [totals] = await db.select({ pendingCents: sql<number>`coalesce(sum(case when ${commissions.status} = 'pending' then ${commissions.amountCents} else 0 end), 0)`, paidCents: sql<number>`coalesce(sum(case when ${commissions.status} = 'paid' then ${commissions.amountCents} else 0 end), 0)`, count: count() }).from(commissions);
+    const byCurrency = await db.select({ currency: loads.currency, pendingCents: sql<number>`sum(case when ${commissions.status} = 'pending' then ${commissions.amountCents} else 0 end)`, paidCents: sql<number>`sum(case when ${commissions.status} = 'paid' then ${commissions.amountCents} else 0 end)`, count: count() })
+      .from(commissions).innerJoin(loads, eq(commissions.loadId, loads.id)).groupBy(loads.currency);
+    const totals = { byCurrency, count: byCurrency.reduce((total, row) => total + row.count, 0) };
     return responseJson({ commissions: rows, total: matched.total, page, pageSize: 25, totals });
   } catch (error) { return authFailure(error); }
 }

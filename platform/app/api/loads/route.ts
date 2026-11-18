@@ -24,6 +24,7 @@ const schema = z.object({
   equipment: z.enum(equipmentTypes),
   weight: z.number().finite().positive().max(100000),
   pay: z.number().finite().min(1).max(1000000).refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 0.000001),
+  currency: z.literal('USD'),
   acceptCommission: z.literal(true),
   company: text(80), email: z.string().trim().email().max(120)
 });
@@ -46,11 +47,11 @@ export async function GET(request: Request) {
     const visible = data.map(({ load, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
       const own = user.role !== 'administrador' && load.ownerId === owner;
       const assigned = user.role !== 'administrador' && load.carrierId === user.id;
-      const { ownerId, carrierId, ...record } = load;
+      const { ownerId, carrierId, deliveryEvidenceId, ...record } = load;
       let quote = null;
       try { quote = freightQuote(load.pay, load.feeAcceptedAt ? load.feeRateBps : COMMISSION_RATE_BPS); } catch { /* Legacy invalid fares remain visible and removable. */ }
       return { ...record, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned, canDelete: own && load.status === 'disponible', canAssign: own && load.status === 'disponible' && Boolean(quote),
-        quote, commissionAccepted: Boolean(load.feeAcceptedAt), commission: invoiceMap.get(load.id) || null };
+        quote, hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId), commissionAccepted: Boolean(load.feeAcceptedAt), commission: invoiceMap.get(load.id) || null };
     });
     return json({ loads: visible, signedIn: Boolean(user), user });
   } catch (error) {
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     if (new TextEncoder().encode(raw).length > 8192) return json({ error: 'La solicitud es demasiado grande.' }, 413);
     let parsed;
     try { parsed = schema.safeParse(JSON.parse(raw)); } catch { return json({ error: 'La solicitud no es válida.' }, 400); }
-    if (!parsed.success) return json({ error: 'Revisa los datos y acepta la comisión del 10% a cargo de la empresa.' }, 400);
+    if (!parsed.success) return json({ error: 'Revisa los datos, indica el flete en USD y acepta la comisión del 10% a cargo de la empresa.' }, 400);
     const since = new Date(Date.now() - 86400000).toISOString();
     const recentCount = (await getDb().select({ value: count() }).from(loads).where(and(eq(loads.ownerId, ownerId), gte(loads.createdAt, since))))[0].value;
     if (recentCount >= 10) return json({ error: 'Puedes publicar hasta 10 cargas en 24 horas. Intenta mañana.' }, 429);

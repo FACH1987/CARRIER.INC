@@ -1,0 +1,1 @@
+ALTER TABLE `loads` ADD `delivery_evidence_id` text;

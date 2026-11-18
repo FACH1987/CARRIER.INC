@@ -26,6 +26,8 @@
     for (const key of ['bankName', 'holderName', 'accountType', 'currency']) if (saved) form.elements.namedItem(key).value = saved[key];
     form.elements.accountNumber.value = '';
     form.elements.consent.checked = false;
+    $('#bank-share').hidden = data.owner.role !== 'transportista';
+    form.elements.shareForDirectTransfer.checked = Boolean(saved?.shareForDirectTransfer);
     $('#bank-content').hidden = false; $('#bank-denied').hidden = true;
   }
   async function perform(operation) {
@@ -39,7 +41,7 @@
     event.preventDefault(); if (!form.reportValidity()) return;
     perform(async () => {
       const data = Object.fromEntries(new FormData(form));
-      await request({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, action: 'save', consent: form.elements.consent.checked }) });
+      await request({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, action: 'save', consent: form.elements.consent.checked, shareForDirectTransfer: form.elements.shareForDirectTransfer.checked }) });
       await load(); $('#bank-status').textContent = 'Cuenta guardada. No se ha realizado ninguna transferencia.';
     });
   });

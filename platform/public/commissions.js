@@ -5,7 +5,7 @@ const rowsElement = document.querySelector('#billing-rows');
 const paymentDialog = document.querySelector('#payment-dialog');
 const paymentForm = document.querySelector('#payment-form');
 let page = 1, total = 0, busy = false, recording = false, records = [], selectedId = null;
-const money = value => new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO', maximumFractionDigits: 2 }).format(value / 100);
+const money = (value, currency) => new Intl.NumberFormat('es-NI', { style: 'currency', currency, currencyDisplay: 'code' }).format(value / 100);
 const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const date = value => value ? new Intl.DateTimeFormat('es-NI', { dateStyle: 'medium', timeZone: 'America/Managua' }).format(new Date(value)) : '';
 function controls() {
@@ -38,10 +38,11 @@ async function loadCommissions() {
     content.hidden = false;
     document.querySelectorAll('[data-admin-only]').forEach(element => { element.hidden = false; });
     denied.hidden = true;
-    document.querySelector('#billing-pending').textContent = money(data.totals.pendingCents);
-    document.querySelector('#billing-paid').textContent = money(data.totals.paidCents);
+    const totalText = field => data.totals.byCurrency.map(row => money(row[field], row.currency)).join(' · ') || money(0, 'USD');
+    document.querySelector('#billing-pending').textContent = totalText('pendingCents');
+    document.querySelector('#billing-paid').textContent = totalText('paidCents');
     document.querySelector('#billing-count').textContent = String(data.totals.count);
-    rowsElement.innerHTML = records.map(row => `<tr><td>${safe(row.company)}<small class="billing-detail">Titular: ${safe(row.payerName)}<br>${safe(row.payerEmail)}</small></td><td>${safe(row.origin)} → ${safe(row.destination)}<small class="billing-detail">${safe(row.carrierName)}<br>Finalizada: ${safe(date(row.createdAt))}</small></td><td>${safe(money(row.fareCents))}</td><td><strong>${safe(money(row.amountCents))}</strong></td><td>${row.status === 'paid' ? 'Pago registrado' : 'Pendiente de cobro'}</td><td>${row.status === 'pending' ? `<button class="workflow-button" type="button" data-record-payment="${safe(row.id)}">Registrar pago recibido</button>` : `<span>${safe(row.paymentReference)}</span><small class="billing-detail">${safe(date(row.paidAt))}</small>`}</td></tr>`).join('');
+    rowsElement.innerHTML = records.map(row => `<tr><td>${safe(row.company)}<small class="billing-detail">Titular: ${safe(row.payerName)}<br>${safe(row.payerEmail)}</small></td><td>${safe(row.origin)} → ${safe(row.destination)}<small class="billing-detail">${safe(row.carrierName)}<br>Finalizada: ${safe(date(row.createdAt))}</small></td><td>${safe(money(row.fareCents, row.currency))}</td><td><strong>${safe(money(row.amountCents, row.currency))}</strong></td><td>${row.status === 'paid' ? 'Pago registrado' : 'Pendiente de cobro'}</td><td>${row.status === 'pending' ? `<button class="workflow-button" type="button" data-record-payment="${safe(row.id)}">Registrar pago recibido</button>` : `<span>${safe(row.paymentReference)}</span><small class="billing-detail">${safe(date(row.paidAt))}</small>`}</td></tr>`).join('');
     document.querySelector('#billing-empty').hidden = records.length > 0;
     document.querySelector('#billing-page').textContent = `Página ${page} de ${Math.max(1, Math.ceil(total / 25))} · ${total} comisiones`;
     statusElement.textContent = 'Comisiones actualizadas. Los importes cobrados corresponden a los pagos registrados manualmente.';
@@ -60,7 +61,7 @@ rowsElement.addEventListener('click', event => {
   if (!row) return;
   selectedId = row.id;
   paymentForm.reset();
-  document.querySelector('#payment-description').textContent = row.company + ' · Comisión: ' + money(row.amountCents);
+  document.querySelector('#payment-description').textContent = row.company + ' · Comisión: ' + money(row.amountCents, row.currency);
   document.querySelector('#payment-error').hidden = true;
   paymentDialog.showModal();
 });

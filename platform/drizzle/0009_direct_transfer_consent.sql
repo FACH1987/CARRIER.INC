@@ -1,0 +1,1 @@
+ALTER TABLE `bank_accounts` ADD `share_for_direct_transfer` integer DEFAULT false NOT NULL;

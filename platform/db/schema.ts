@@ -20,7 +20,8 @@ export const bankAccounts = sqliteTable('bank_accounts', {
   accountType: text('account_type', { enum: ['ahorro', 'corriente'] }).notNull(),
   currency: text('currency', { enum: ['NIO', 'USD'] }).notNull(),
   encryptedNumber: text('encrypted_number').notNull(), lastFour: text('last_four').notNull(),
-  consentAt: text('consent_at').notNull(), updatedAt: text('updated_at').notNull()
+  consentAt: text('consent_at').notNull(), shareForDirectTransfer: integer('share_for_direct_transfer', { mode: 'boolean' }).notNull().default(false),
+  updatedAt: text('updated_at').notNull()
 });
 export const authLimits = sqliteTable('auth_limits', {
   key: text('key').primaryKey(), attempts: integer('attempts').notNull(), expiresAt: integer('expires_at').notNull()
@@ -74,13 +75,14 @@ export const loads = sqliteTable('loads', {
   origin: text('origin').notNull(), destination: text('destination').notNull(),
   pickupDate: text('pickup_date').notNull(), equipment: text('equipment').notNull(),
   weight: real('weight').notNull(), pay: real('pay').notNull(),
+  currency: text('currency', { enum: ['NIO', 'USD'] }).notNull().default('NIO'),
   company: text('company').notNull(), email: text('email').notNull(),
   createdAt: text('created_at').notNull(),
   status: text('status', { enum: ['disponible', 'asignada', 'en_transito', 'entregada', 'finalizada'] }).notNull().default('disponible'),
   carrierId: text('carrier_id').references(() => users.id, { onDelete: 'restrict' }),
   transportVehicleId: text('transport_vehicle_id').references(() => carrierVehicles.id, { onDelete: 'restrict' }),
   transportDriverId: text('transport_driver_id').references(() => carrierDrivers.id, { onDelete: 'restrict' }),
-  assignedAt: text('assigned_at'), acceptedAt: text('accepted_at'), deliveredAt: text('delivered_at'), completedAt: text('completed_at'),
+  assignedAt: text('assigned_at'), acceptedAt: text('accepted_at'), deliveredAt: text('delivered_at'), deliveryEvidenceId: text('delivery_evidence_id'), completedAt: text('completed_at'),
   feeRateBps: integer('fee_rate_bps').notNull().default(0),
   feeCents: integer('fee_cents').notNull().default(0),
   feeAcceptedAt: text('fee_accepted_at')

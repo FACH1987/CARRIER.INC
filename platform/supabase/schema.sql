@@ -29,7 +29,8 @@ CREATE TABLE public."bank_accounts" (
   "encrypted_number" text NOT NULL,
   "last_four" text NOT NULL,
   "consent_at" text NOT NULL,
-  "updated_at" text NOT NULL
+  "updated_at" text NOT NULL,
+  "share_for_direct_transfer" bigint NOT NULL DEFAULT 0
 );
 ALTER TABLE public."bank_accounts" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public."bank_accounts" FROM PUBLIC, anon, authenticated;
@@ -136,7 +137,9 @@ CREATE TABLE public."loads" (
   "fee_cents" bigint NOT NULL DEFAULT 0,
   "fee_accepted_at" text,
   "transport_vehicle_id" text,
-  "transport_driver_id" text
+  "transport_driver_id" text,
+  "delivery_evidence_id" text,
+  "currency" text NOT NULL DEFAULT 'NIO'
 );
 CREATE INDEX "loads_owner_created_idx" ON public."loads" ("owner_id", "created_at");
 CREATE INDEX "loads_pickup_date_idx" ON public."loads" ("pickup_date");

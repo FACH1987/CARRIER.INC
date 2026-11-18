@@ -117,7 +117,8 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(malformed.status, 400);
     });
     await t.test('publishes cargo and requires an account to read it', async () => {
-      const cargo = { origin: 'Managua', destination: 'León', pickupDate: '2099-12-01', equipment: 'Furgon Seco 53"', weight: 1200, pay: 5000, acceptCommission: true, company: 'Local integration test', email };
+      const cargo = { origin: 'Managua', destination: 'León', pickupDate: '2099-12-01', equipment: 'Furgon Seco 53"', weight: 1200, pay: 5000, currency: 'USD', acceptCommission: true, company: 'Local integration test', email };
+      assert.equal((await api('/api/loads', { method: 'POST', body: { ...cargo, currency: 'NIO' }, cookie })).status, 400);
       assert.equal((await api('/api/loads', { method: 'POST', body: { ...cargo, equipment: 'Refrigerado' }, cookie })).status, 400);
       const response = await api('/api/loads', { method: 'POST', body: cargo, cookie });
       assert.equal(response.status, 201);
@@ -167,7 +168,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       await db.prepare('insert into loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, company, email, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
         .bind(oldId, `account:${owner.id}`, 'Managua', 'León', '2000-01-01', 'Refrigerado', 1000, 5000, 'Expired local test', email, new Date().toISOString()).run();
       assert(!(await (await api('/api/loads', { cookie })).json()).loads.some(row => row.id === oldId));
-      assert((await (await api('/api/loads?mine=1', { cookie })).json()).loads.some(row => row.id === oldId && row.canDelete));
+      assert((await (await api('/api/loads?mine=1', { cookie })).json()).loads.some(row => row.id === oldId && row.canDelete && row.currency === 'NIO'));
       assert.equal((await api('/api/loads/' + oldId, { method: 'DELETE', cookie })).status, 200);
     });
     await t.test('carriers register, retain their role on login, and see loads only with a session', async () => {
@@ -298,7 +299,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const victimLogin = await api('/api/auth/login', { method: 'POST', body: { email: victimEmail, password } });
       assert.equal(victimLogin.status, 200);
       const victimCookie = cookieFrom(victimLogin);
-      const victimCargo = await api('/api/loads', { method: 'POST', cookie: victimCookie, body: { origin: 'A', destination: 'B', pickupDate: '2099-12-01', equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 5000, acceptCommission: true, company: 'Temporary test account', email: victimEmail } });
+      const victimCargo = await api('/api/loads', { method: 'POST', cookie: victimCookie, body: { origin: 'A', destination: 'B', pickupDate: '2099-12-01', equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 5000, currency: 'USD', acceptCommission: true, company: 'Temporary test account', email: victimEmail } });
       assert.equal(victimCargo.status, 201);
       const endpoint = '/api/admin/users/' + victimId;
       assert.equal((await api(endpoint, { method: 'DELETE' })).status, 401);
@@ -437,7 +438,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await api('/api/loads', { cookie: carrierSession })).status, 403);
       assert.equal((await review(newLicense)).status, 409);
       await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(metadata.expiresAt, newLicense.id).run();
-      const freight = { origin: 'Managua', destination: 'Leon', pickupDate: afterDays(7), equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 100.05, company: 'Commission test', email };
+      const freight = { origin: 'Managua', destination: 'Leon', pickupDate: afterDays(7), equipment: 'Camion 5 TNL Refrigerado', weight: 1000, pay: 100.05, currency: 'USD', company: 'Commission test', email };
       assert.equal((await api('/api/loads', { method: 'POST', cookie, body: freight })).status, 400);
       const posted = await api('/api/loads', { method: 'POST', cookie, body: { ...freight, acceptCommission: true, feeCents: 1 } });
       assert.equal(posted.status, 201);
@@ -474,10 +475,50 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await act('cancel_assignment')).status, 409);
       assert.equal((await api('/api/loads/' + financialLoad.id, { method: 'DELETE', cookie })).status, 409);
       assert.equal((await api('/api/admin/users/' + carrierAccount.id, { method: 'DELETE', cookie: adminCookie })).status, 409);
-      assert.equal((await act('deliver', carrierSession)).status, 200);
+      assert.equal((await act('deliver', carrierSession)).status, 409);
+      const evidence = base + '/api/loads/' + financialLoad.id + '/delivery-evidence';
+      const photos = new FormData();
+      const png = new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64')], { type: 'image/png' });
+      photos.set('receipt', png, 'receipt.png');
+      const uploadEvidence = async session => {
+        const request = new Request(evidence, { method: 'POST', body: photos });
+        return runtime.dispatchFetch(evidence, {
+          method: 'POST',
+          headers: { Origin: base, Cookie: session, 'Content-Type': request.headers.get('Content-Type') },
+          body: await request.arrayBuffer(),
+        });
+      };
+      assert.equal((await uploadEvidence(carrierSession)).status, 400);
+      photos.set('cargo', png, 'cargo.png');
+      assert.equal((await uploadEvidence(cookie)).status, 403);
+      assert.equal((await uploadEvidence(carrierSession)).status, 200);
+      assert.equal((await uploadEvidence(carrierSession)).status, 409);
+      const receipt = await runtime.dispatchFetch(evidence + '?photo=receipt', { headers: { Cookie: cookie } });
+      assert.equal(receipt.status, 200);
+      assert.equal(receipt.headers.get('cache-control'), 'private, no-store');
+      assert.deepEqual(await receipt.arrayBuffer(), await png.arrayBuffer());
+      assert.equal((await runtime.dispatchFetch(evidence + '?photo=cargo')).status, 401);
+      const transferDetails = session => api('/api/bank-account', {
+        method: 'POST', cookie: session, body: { action: 'direct-transfer', loadId: financialLoad.id },
+      });
+      const receivingAccount = { action: 'save', bankName: 'Synthetic Bank', holderName: 'Synthetic Carrier', accountType: 'ahorro', currency: 'USD', accountNumber: '999900001111', consent: true, shareForDirectTransfer: true };
+      const saveReceivingAccount = details => api('/api/bank-account', { method: 'POST', cookie: carrierSession, body: details });
+      assert.equal((await saveReceivingAccount(receivingAccount)).status, 200);
+      assert.equal((await transferDetails(cookie)).status, 404);
       assert.equal((await act('complete', carrierSession)).status, 403);
       const completed = await Promise.all([act('complete'), act('complete')]);
       assert(completed.every(result => result.status === 200));
+      assert.equal((await saveReceivingAccount({ ...receivingAccount, currency: 'NIO' })).status, 200);
+      assert.equal((await transferDetails(cookie)).status, 409);
+      assert.equal((await saveReceivingAccount(receivingAccount)).status, 200);
+      const transfer = await transferDetails(cookie);
+      assert.equal(transfer.status, 200);
+      assert.equal((await transfer.json()).accountNumber, '999900001111');
+      assert.equal((await transfer.json()).fareCents, 10005);
+      assert.equal((await transfer.json()).currency, 'USD');
+      assert.equal((await transferDetails(carrierSession)).status, 403);
+      assert.equal((await saveReceivingAccount({ ...receivingAccount, shareForDirectTransfer: false })).status, 200);
+      assert.equal((await transferDetails(cookie)).status, 404);
       const invoices = await db.prepare('select * from commissions where load_id = ?').bind(financialLoad.id).all();
       assert.equal(invoices.results.length, 1);
       const invoice = invoices.results[0];
@@ -487,15 +528,16 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await api('/api/admin/commissions')).status, 401);
       assert.equal((await api('/api/admin/commissions', { cookie })).status, 403);
       const ledger = await (await api('/api/admin/commissions', { cookie: adminCookie })).json();
-      assert.equal(ledger.totals.pendingCents, 1001);
+      assert.equal(ledger.totals.byCurrency[0].pendingCents, 1001);
+      assert.equal(ledger.totals.byCurrency[0].currency, 'USD');
       const settle = '/api/admin/commissions/' + invoice.id + '/settle';
       assert.equal((await api(settle, { method: 'POST', cookie, body: { reference: 'BANK-123', confirmReceived: true } })).status, 403);
       assert.equal((await api(settle, { method: 'POST', cookie: adminCookie, body: { reference: 'BANK-123' } })).status, 400);
       assert.equal((await api(settle, { method: 'POST', cookie: adminCookie, body: { reference: 'BANK-123', confirmReceived: true } })).status, 200);
       assert.equal((await api(settle, { method: 'POST', cookie: adminCookie, body: { reference: 'BANK-OTHER', confirmReceived: true } })).status, 409);
       const paidLedger = await (await api('/api/admin/commissions?status=paid', { cookie: adminCookie })).json();
-      assert.equal(paidLedger.totals.pendingCents, 0);
-      assert.equal(paidLedger.totals.paidCents, 1001);
+      assert.equal(paidLedger.totals.byCurrency[0].pendingCents, 0);
+      assert.equal(paidLedger.totals.byCurrency[0].paidCents, 1001);
       assert.equal(paidLedger.commissions[0].paymentReference, 'BANK-123');
       assert.equal((await api('/api/loads/' + financialLoad.id, { method: 'DELETE', cookie })).status, 409);
       await api('/api/auth/logout', { method: 'POST', cookie: adminCookie, body: {} });

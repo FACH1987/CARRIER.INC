@@ -54,6 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       const [existing] = await db.select({ id: commissions.id }).from(commissions).where(eq(commissions.loadId, id)).limit(1);
       if (load.status === 'finalizada' && existing) return responseJson({ status: 'finalizada', commissionId: existing.id });
       if (load.status !== 'entregada' || !load.carrierId || !load.feeAcceptedAt) throw new AuthError('El transportista debe confirmar la entrega antes de finalizar.', 409);
+      if (!load.deliveryEvidenceId) throw new AuthError('Se necesitan las dos fotos de la entrega antes de confirmar.', 409);
       const quote = freightQuote(load.pay, load.feeRateBps);
       if (quote.commissionCents !== load.feeCents || load.feeRateBps !== COMMISSION_RATE_BPS) throw new AuthError('La comisión acordada requiere revisión antes de finalizar.', 409);
       await db.batch([
@@ -63,17 +64,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       const [invoice] = await db.select({ id: commissions.id }).from(commissions).where(eq(commissions.loadId, id)).limit(1);
       return responseJson({ status: 'finalizada', commissionId: invoice.id });
     }
+    if (data.action === 'deliver') throw new AuthError('Adjunta las dos fotos para reportar la entrega.', 409);
     if (data.action === 'cancel_assignment') {
       if (!owner) throw new AuthError('Solo quien publicó la carga puede retirar la asignación.', 403);
     } else if (!carrier) throw new AuthError('Solo el transportista asignado puede realizar esta acción.', 403);
-    const expected = data.action === 'deliver' ? 'en_transito' : 'asignada';
+    const expected = 'asignada';
     if (load.status !== expected) throw new AuthError('El estado de la carga no permite esa acción.', 409);
     if (data.action === 'accept') {
       if (!load.transportVehicleId) throw new AuthError('Solicita una nueva asignación con vehículo verificado.', 409);
       await requireCarrierReady(account.id, load.transportVehicleId, load.pickupDate);
     }
-    const status = data.action === 'accept' ? 'en_transito' : data.action === 'deliver' ? 'entregada' : 'disponible';
-    const updated = await db.update(loads).set({ status, ...(status === 'disponible' ? { carrierId: null, transportVehicleId: null, transportDriverId: null, assignedAt: null, acceptedAt: null } : {}), ...(status === 'en_transito' ? { acceptedAt: now } : {}), ...(status === 'entregada' ? { deliveredAt: now } : {}) })
+    const status = data.action === 'accept' ? 'en_transito' : 'disponible';
+    const updated = await db.update(loads).set({ status, ...(status === 'disponible' ? { carrierId: null, transportVehicleId: null, transportDriverId: null, assignedAt: null, acceptedAt: null } : {}), ...(status === 'en_transito' ? { acceptedAt: now } : {}) })
       .where(and(eq(loads.id, id), eq(loads.status, expected), data.action === 'cancel_assignment' ? eq(loads.ownerId, load.ownerId) : eq(loads.carrierId, account.id))).returning({ id: loads.id });
     if (!updated.length) throw new AuthError('La carga cambió. Actualiza el tablero.', 409);
     return responseJson({ status });

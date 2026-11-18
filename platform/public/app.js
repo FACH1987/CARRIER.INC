@@ -159,8 +159,8 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function formatCurrency(value) {
-  return new Intl.NumberFormat("es-NI", { style: "currency", currency: "NIO", maximumFractionDigits: 2 }).format(value);
+function formatCurrency(value, currency) {
+  return new Intl.NumberFormat("es-NI", { style: "currency", currency, currencyDisplay: "code" }).format(value);
 }
 
 function formatWeight(value) {
@@ -191,8 +191,8 @@ function getVisibleLoads() {
     normalizeSearch(load.destination).includes(destination) &&
     (!equipment || load.equipment === equipment)
   ).sort((a, b) => {
-    if (filters.sort.value === "pay-desc") return Number(b.pay) - Number(a.pay);
-    if (filters.sort.value === "pay-asc") return Number(a.pay) - Number(b.pay);
+    if (filters.sort.value === "pay-desc") return b.currency.localeCompare(a.currency) || Number(b.pay) - Number(a.pay);
+    if (filters.sort.value === "pay-asc") return b.currency.localeCompare(a.currency) || Number(a.pay) - Number(b.pay);
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
 }
@@ -221,7 +221,7 @@ function renderLoads() {
         <div class="load-detail"><span class="detail-label">RECOGIDA</span><span class="detail-value">${escapeHtml(formatDate(load.pickupDate))}</span></div>
         <div class="load-detail"><span class="detail-label">EQUIPO</span><span class="equipment-pill">${escapeHtml(load.equipment)}</span></div>
         <div class="load-detail"><span class="detail-label">PESO</span><span class="detail-value">${escapeHtml(formatWeight(load.weight))}</span></div>
-        <div class="load-detail pay-detail"><span class="detail-label">PAGO OFRECIDO</span><span class="detail-value pay-value">${escapeHtml(formatCurrency(load.pay))}</span></div>
+        <div class="load-detail pay-detail"><span class="detail-label">PAGO OFRECIDO</span><span class="detail-value pay-value">${escapeHtml(formatCurrency(load.pay, load.currency))}</span></div>
         <div class="load-actions">${contactControl}${workflowControls(load)}${removeControl}</div><div class="load-extra">${workflowSummary(load)}</div>
       </article>`;
   }).join("");
@@ -268,18 +268,22 @@ loadList.addEventListener('click', async (event) => {
 });
 
 const assignDialog = document.querySelector('#assign-dialog');
+const transferDialog = document.querySelector('#transfer-dialog');
+transferDialog.addEventListener('close', () => {
+  transferDialog.querySelectorAll('dd').forEach(value => { value.textContent = ''; });
+});
 const assignForm = document.querySelector('#assign-form');
 let assigningId = null;
 const statusNames = { disponible: 'Disponible', asignada: 'Esperando aceptación', en_transito: 'En tránsito', entregada: 'Entrega reportada', finalizada: 'Finalizada' };
-function quoteText(quote) {
-  return 'Flete al transportista: ' + formatCurrency(quote.fareCents / 100) + ' · Comisión Carrier.INC 10%: ' + formatCurrency(quote.commissionCents / 100) + ' · Total empresa: ' + formatCurrency(quote.totalCents / 100);
+function quoteText(quote, currency) {
+  return 'Flete al transportista: ' + formatCurrency(quote.fareCents / 100, currency) + ' · Comisión Carrier.INC 10%: ' + formatCurrency(quote.commissionCents / 100, currency) + ' · Total empresa: ' + formatCurrency(quote.totalCents / 100, currency);
 }
 function updatePostQuote() {
   const pay = Number(postForm.elements.namedItem('pay').value);
   if (!Number.isFinite(pay) || pay < 1 || pay > 1000000) { document.querySelector('#post-quote').textContent = 'Ingresa el valor del flete para ver la comisión.'; return; }
   const fareCents = Math.round(pay * 100);
   const commissionCents = Math.round(fareCents * 0.1);
-  document.querySelector('#post-quote').textContent = quoteText({ fareCents, commissionCents, totalCents: fareCents + commissionCents });
+  document.querySelector('#post-quote').textContent = quoteText({ fareCents, commissionCents, totalCents: fareCents + commissionCents }, 'USD');
 }
 postForm.elements.namedItem('pay').addEventListener('input', updatePostQuote);
 function workflowControls(load) {
@@ -288,17 +292,28 @@ function workflowControls(load) {
   if (load.canAssign) html += button('assign', 'Asignar transportista');
   if (load.isOwner && load.status === 'asignada') html += button('cancel_assignment', 'Retirar asignación');
   if (load.isCarrier && load.status === 'asignada') html += button('accept', 'Aceptar viaje') + button('reject', 'Rechazar');
-  if (load.isCarrier && load.status === 'en_transito') html += button('deliver', 'Reportar entrega');
-  if (load.isOwner && load.status === 'entregada') html += button('complete', 'Confirmar finalización');
+  if (load.isCarrier && ['en_transito', 'entregada'].includes(load.status) && !load.hasDeliveryEvidence) {
+    html += `<form class="post-form" data-delivery-form="${escapeHtml(load.id)}">
+      <label class="form-field"><span>Foto del documento de recibido del cliente en destino</span><input type="file" name="receipt" accept="image/jpeg,image/png" required></label>
+      <label class="form-field"><span>Foto de la carga en el lugar de entrega</span><input type="file" name="cargo" accept="image/jpeg,image/png" required></label>
+      <button type="submit" class="workflow-button" ${workflowBusy.has(load.id) ? 'disabled' : ''}>Reportar entrega</button>
+    </form>`;
+  }
+  if (load.isOwner && load.status === 'entregada' && load.hasDeliveryEvidence) html += button('complete', 'Confirmar entrega');
+  if (load.isOwner && load.status === 'finalizada') html += button('transfer', 'Datos para transferir el flete');
   return html;
 }
 function workflowSummary(load) {
   const status = escapeHtml(statusNames[load.status] || 'Disponible');
   const carrier = load.carrierName ? '<span>Transportista: ' + escapeHtml(load.carrierName) + '</span>' : '';
   const unit = load.vehiclePlate ? '<span>Unidad: ' + escapeHtml(load.vehiclePlate) + ' · Conductor: ' + escapeHtml(load.driverName || '') + ' · Categoría: ' + escapeHtml(load.licenseCategory || '') + '</span>' : '';
-  const pricing = load.quote ? '<span>' + escapeHtml(quoteText(load.quote)) + (load.commissionAccepted ? '' : ' · Requiere aceptación al asignar') + '</span>' : '';
-  const invoice = load.commission ? '<strong>' + (load.commission.status === 'paid' ? 'Comisión registrada como pagada' : 'Comisión pendiente de pago por la empresa') + ': ' + escapeHtml(formatCurrency(load.commission.amountCents / 100)) + '</strong>' : '';
-  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + pricing + invoice;
+  const pricing = load.quote ? '<span>' + escapeHtml(quoteText(load.quote, load.currency)) + (load.commissionAccepted ? '' : ' · Requiere aceptación al asignar') + '</span>' : '';
+  const invoice = load.commission ? '<strong>' + (load.commission.status === 'paid' ? 'Comisión registrada como pagada' : 'Comisión pendiente de pago por la empresa') + ': ' + escapeHtml(formatCurrency(load.commission.amountCents / 100, load.currency)) + '</strong>' : '';
+  const evidenceUrl = '/api/loads/' + encodeURIComponent(load.id) + '/delivery-evidence?photo=';
+  const evidence = load.hasDeliveryEvidence
+    ? `<span><a href="${evidenceUrl}receipt" target="_blank" rel="noopener">Ver documento de recibido</a> · <a href="${evidenceUrl}cargo" target="_blank" rel="noopener">Ver foto de la carga</a></span>`
+    : '';
+  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + pricing + evidence + invoice;
 }
 async function workflowRequest(id, payload) {
   const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -321,6 +336,32 @@ loadList.addEventListener('click', async event => {
   const load = loads.find(item => item.id === button.dataset.load);
   if (!load || workflowBusy.has(load.id)) return;
   const action = button.dataset.workflow;
+  if (action === 'transfer') {
+    workflowBusy.add(load.id);
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/bank-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'direct-transfer', loadId: load.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No pudimos consultar los datos de transferencia.');
+      if (!signedIn) return;
+      document.querySelector('#transfer-fare').textContent = formatCurrency(data.fareCents / 100, data.currency);
+      document.querySelector('#transfer-bank').textContent = data.bankName;
+      document.querySelector('#transfer-holder').textContent = data.holderName;
+      document.querySelector('#transfer-type').textContent = data.accountType === 'ahorro' ? 'Ahorro' : 'Corriente';
+      document.querySelector('#transfer-number').textContent = data.accountNumber;
+      transferDialog.showModal();
+    } catch (error) {
+      showToast(error.message || 'Revisa tu conexión.');
+    } finally {
+      workflowBusy.delete(load.id);
+      button.disabled = false;
+    }
+    return;
+  }
   if (action === 'assign') {
     if (!load.canAssign) return;
     assigningId = load.id;
@@ -328,7 +369,7 @@ loadList.addEventListener('click', async event => {
     assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Consulta primero el transportista</option>';
     document.querySelector('#assign-verified').textContent = '';
     document.querySelector('#assign-route').textContent = load.origin + ' → ' + load.destination;
-    document.querySelector('#assign-quote').textContent = quoteText(load.quote);
+    document.querySelector('#assign-quote').textContent = quoteText(load.quote, load.currency);
     document.querySelector('#assign-error').hidden = true;
     assignDialog.showModal();
     return;
@@ -337,8 +378,7 @@ loadList.addEventListener('click', async event => {
     accept: '¿Aceptar este viaje por el flete indicado? La comisión de Carrier.INC la paga la empresa, adicional al flete.',
     reject: '¿Rechazar esta asignación? La carga volverá a estar disponible y no se generará comisión.',
     cancel_assignment: '¿Retirar la asignación antes de que el transportista la acepte? No se generará comisión.',
-    deliver: '¿Confirmas que realizaste la entrega? La empresa deberá confirmar la finalización.',
-    complete: '¿Confirmas que el transporte finalizó? Se generará una comisión pendiente de pago de ' + formatCurrency((load.quote?.commissionCents || 0) / 100) + ' a cargo de tu empresa. No se realiza un cargo automático.'
+    complete: '¿Confirmas que el transporte finalizó? Se generará una comisión pendiente de pago de ' + formatCurrency((load.quote?.commissionCents || 0) / 100, load.currency) + ' a cargo de tu empresa. No se realiza un cargo automático.'
   };
   if (!messages[action] || !window.confirm(messages[action])) return;
   workflowBusy.add(load.id);
@@ -350,6 +390,31 @@ loadList.addEventListener('click', async event => {
     showToast(action === 'complete' ? 'Carga finalizada. Comisión pendiente de pago registrada.' : 'Estado de la carga actualizado.');
   } catch (error) { showToast(error.message || 'Revisa tu conexión.'); }
   finally { workflowBusy.delete(load.id); renderLoads(); }
+});
+loadList.addEventListener('submit', async event => {
+  const form = event.target.closest('[data-delivery-form]');
+  if (!form) return;
+  event.preventDefault();
+  const id = form.dataset.deliveryForm;
+  if (workflowBusy.has(id)) return;
+  const photos = new FormData(form);
+  const button = form.querySelector('button[type="submit"]');
+  workflowBusy.add(id);
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/delivery-evidence', { method: 'POST', body: photos });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'No pudimos guardar las fotos.');
+    workflowBusy.delete(id);
+    showMyLoads();
+    await refreshLoads();
+    showToast('Entrega reportada. La empresa puede revisar las fotos y confirmar.');
+  } catch (error) {
+    showToast(error.message || 'Revisa tu conexión.');
+  } finally {
+    workflowBusy.delete(id);
+    button.disabled = false;
+  }
 });
 document.querySelector('#assign-close').addEventListener('click', () => { if (!workflowBusy.has(assigningId)) assignDialog.close(); });
 assignDialog.addEventListener('cancel', event => { if (workflowBusy.has(assigningId)) event.preventDefault(); });
@@ -440,6 +505,7 @@ postForm.addEventListener("submit", async (event) => {
     equipment: String(formData.get("equipment")),
     weight: Number(formData.get("weight")),
     pay: Number(formData.get("pay")),
+    currency: 'USD',
     company: String(formData.get("company")).trim(),
     email: String(formData.get("email")).trim(),
     acceptCommission: postForm.elements.namedItem("acceptCommission").checked
@@ -567,4 +633,8 @@ document.querySelector('#account-logout').addEventListener('click', async (event
 });
 
 refreshLoads();
-window.setInterval(refreshLoads, 30000);
+window.setInterval(() => {
+  const selectingPhotos = [...loadList.querySelectorAll('[data-delivery-form] input[type="file"]')]
+    .some(input => input.files.length || input === document.activeElement);
+  if (!selectingPhotos) refreshLoads();
+}, 30000);
