@@ -391,3 +391,29 @@ h1, h2, h3, p { margin-top: 0; }
 .freight-quote { padding: 14px; margin: 16px 0; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; background: #eff6ff; line-height: 1.8; font-size: 12px; }
 .delivery-signature { min-width: 0; padding: 12px; border: 1px solid #d7e2f1; border-radius: 8px; }
 .delivery-signature canvas { display: block; width: 100%; height: auto; border: 1px solid #b7c9e5; background: #fff; touch-action: none; margin-bottom: 8px; }
+
+.topbar { height: auto; min-height: 88px; padding-block: 12px; gap: 12px 20px; flex-wrap: wrap; }
+.main-nav { flex-wrap: wrap; height: auto; margin-inline: 0; gap: 10px 22px; }
+.top-actions { min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+.hero-actions { flex-wrap: wrap; }
+.load-card > *, .load-actions > *, .form-grid > *, .results-controls > * { min-width: 0; }
+.load-actions .button, .load-actions .workflow-button { white-space: normal; text-align: center; }
+.load-extra, .company-line, .route-cities, .post-dialog p,
+#load-chat-content, #support-content, #subscription-content { overflow-wrap: anywhere; }
+.post-dialog { max-height: calc(100dvh - 24px); overflow-y: auto; }
+.post-dialog iframe, #tracking-map { max-width: 100%; border: 0; }
+.post-form input, .post-form select, .post-form textarea { max-width: 100%; min-width: 0; }
+
+@media (max-width: 1050px) {
+  .main-nav { order: 3; flex-basis: 100%; justify-content: center; }
+  .main-nav .nav-link:nth-child(2) { display: inline-flex; }
+}
+@media (max-width: 650px) {
+  .topbar { min-height: 82px; gap: 12px; }
+  .top-actions { flex-basis: 100%; margin-inline: 0; justify-content: flex-start; }
+  .topbar .button, .hero-actions .button, .load-actions .button { min-height: 44px; }
+  .main-nav { gap: 8px 14px; }
+  .post-form input:not([type="checkbox"]), .post-form select, .post-form textarea { font-size: 16px; }
+  .dialog-actions { flex-wrap: wrap; }
+  .load-extra { font-size: 12px; }
+}

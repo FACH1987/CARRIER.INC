@@ -10,11 +10,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
-    <link rel="stylesheet" href="styles.css?v=live-operations-1">
+    <link rel="stylesheet" href="styles.css?v=install-1">
     <link rel="stylesheet" href="plans.css">
     <script src="freight-map.js" defer></script>
     <script src="app.js?v=private-contacts-1" defer></script>
-  <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
+  <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script>  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/carrier-180.png">
+  <script src="install-app.js" defer></script>
+</head>
   <body>
     <header class="topbar">
       <a class="brand" href="#" aria-label="Carrier.INC. Diseñado por: Gueguense Digital. Inicio">
@@ -41,6 +44,7 @@
           <div class="hero-actions">
             <a class="button button-dark" href="#tablero">Encontrar cargas <span aria-hidden="true">↓</span></a>
             <button class="button button-light" id="open-post-hero" type="button"><span class="plus-icon" aria-hidden="true">＋</span> Publicar una carga</button>
+            <button class="button button-light" id="install-app" type="button" hidden>Instalar app</button>
           </div>
           <div class="hero-proof">
             <span class="network-symbol" aria-hidden="true">↗</span>
@@ -285,6 +289,14 @@
       </form>
     </dialog>
     <dialog class="post-dialog" id="pickup-map" aria-labelledby="pickup-map-title"><form class="post-form" method="dialog"><h2 id="pickup-map-title">Mapa de recogida</h2><iframe title="Punto de recogida en OpenStreetMap" width="100%" height="330" referrerpolicy="no-referrer"></iframe><button type="submit" class="button button-light">Cerrar</button></form></dialog>
+    <dialog class="post-dialog account-dialog" id="install-app-help" aria-labelledby="install-app-title">
+      <form class="post-form" method="dialog">
+        <h2 id="install-app-title">Instalar Carrier.INC</h2>
+        <p>En iPhone o iPad, abre la web en Safari, toca <strong>Compartir</strong> y elige <strong>Añadir a pantalla de inicio</strong>.</p>
+        <p>En Android o computadora, abre el menú del navegador y busca <strong>Instalar app</strong> o <strong>Añadir a pantalla de inicio</strong>. La opción depende del navegador.</p>
+        <button class="button button-dark" type="submit">Cerrar</button>
+      </form>
+    </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <dialog class="post-dialog account-dialog" id="rating-dialog" aria-labelledby="rating-title">
       <form class="post-form" id="rating-form">

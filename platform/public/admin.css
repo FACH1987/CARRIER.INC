@@ -19,6 +19,10 @@
 .admin-pagination { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 20px; color: #526380; font-size: 12px; }
 .admin-pagination div { display: flex; gap: 8px; }
 .admin-empty { text-align: center; padding: 24px; color: #526380; }
+@media (max-width: 650px) {
+  .admin-layout .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-layout .admin-search label:nth-child(2) { min-width: 0; }
+}
 @media(max-width:650px) { .admin-layout { margin-top: 28px; padding: 0 18px 30px; } .admin-metrics { gap: 8px; } .admin-metrics article { padding: 14px 10px; } .admin-metrics span { font-size: 11px; } .admin-metrics strong { font-size: 26px; } .admin-search { display: grid; grid-template-columns: 1fr 1fr; } .admin-search label { grid-column: 1 / -1; } .admin-pagination { flex-wrap: wrap; } }
 
 .admin-identity { padding: 14px 18px; border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; color: #1e40af; overflow-wrap: anywhere; font-weight: 600; }
