@@ -139,7 +139,9 @@ CREATE TABLE public."loads" (
   "transport_vehicle_id" text,
   "transport_driver_id" text,
   "delivery_evidence_id" text,
-  "currency" text NOT NULL DEFAULT 'NIO'
+  "currency" text NOT NULL DEFAULT 'NIO',
+  "customer_type" text,
+  "visibility" text NOT NULL DEFAULT 'estandar'
 );
 CREATE INDEX "loads_owner_created_idx" ON public."loads" ("owner_id", "created_at");
 CREATE INDEX "loads_pickup_date_idx" ON public."loads" ("pickup_date");
@@ -242,6 +244,16 @@ CREATE UNIQUE INDEX "load_quotes_carrier_load" ON public."load_quotes" ("carrier
 ALTER TABLE public."load_quotes" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public."load_quotes" FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public."load_quotes" TO service_role;
+CREATE TABLE public."carrier_ratings" (
+  "load_id" text PRIMARY KEY NOT NULL,
+  "carrier_id" text NOT NULL,
+  "score" bigint NOT NULL,
+  "created_at" text NOT NULL
+);
+CREATE INDEX "carrier_ratings_carrier" ON public."carrier_ratings" ("carrier_id");
+ALTER TABLE public."carrier_ratings" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public."carrier_ratings" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."carrier_ratings" TO service_role;
 ALTER TABLE public."bank_accounts" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."sessions" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."carrier_profiles" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
@@ -264,4 +276,6 @@ ALTER TABLE public."phone_deliveries" ADD FOREIGN KEY ("user_id") REFERENCES pub
 ALTER TABLE public."subscription_payments" ADD FOREIGN KEY ("verified_by") REFERENCES public."users" ("id") ON DELETE NO ACTION;
 ALTER TABLE public."subscription_payments" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE NO ACTION;
 ALTER TABLE public."load_quotes" ADD FOREIGN KEY ("carrier_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
+ALTER TABLE public."carrier_ratings" ADD FOREIGN KEY ("carrier_id") REFERENCES public."users" ("id") ON DELETE NO ACTION;
+ALTER TABLE public."carrier_ratings" ADD FOREIGN KEY ("load_id") REFERENCES public."loads" ("id") ON DELETE NO ACTION;
 COMMIT;

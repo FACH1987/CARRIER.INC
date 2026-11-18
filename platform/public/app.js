@@ -4,8 +4,13 @@ const countElement = document.querySelector("#load-count");
 const quoteNotice = document.querySelector('#quote-notice');
 const quoteDialog = document.querySelector('#quote-dialog');
 const quoteForm = document.querySelector('#quote-form');
+const ratingDialog = document.querySelector('#rating-dialog');
+const ratingForm = document.querySelector('#rating-form');
 const starterQuoteDelay = 15 * 60 * 1000;
 let viewerPlan = null;
+const visibilityRank = { estandar: 0, destacada: 1, vip: 2 };
+const visibilityLabel = { destacada: 'Destacada', vip: 'Urgente / VIP' };
+const customerTypeLabel = { particular: 'Particular', comercio: 'Pequeño comercio', empresa: 'Empresa' };
 let quotingId = null;
 const postDialog = document.querySelector("#post-dialog");
 const postForm = document.querySelector("#post-form");
@@ -201,7 +206,8 @@ function getVisibleLoads() {
   ).sort((a, b) => {
     if (filters.sort.value === "pay-desc") return b.currency.localeCompare(a.currency) || Number(b.pay) - Number(a.pay);
     if (filters.sort.value === "pay-asc") return b.currency.localeCompare(a.currency) || Number(a.pay) - Number(b.pay);
-    return new Date(b.createdAt) - new Date(a.createdAt);
+    return (visibilityRank[b.visibility] ?? 0) - (visibilityRank[a.visibility] ?? 0)
+      || new Date(b.createdAt) - new Date(a.createdAt);
   });
 }
 
@@ -229,7 +235,8 @@ function renderLoads() {
     return `
       <article class="load-card">
         <div class="route-info">
-          <div class="company-line"><span class="company-avatar">${escapeHtml(initials(load.company))}</span>${escapeHtml(load.company)}</div>
+          <div class="company-line"><span class="company-avatar">${escapeHtml(initials(load.company))}</span>${escapeHtml(load.company)} · ${escapeHtml(customerTypeLabel[load.customerType] || '')}</div>
+          ${visibilityLabel[load.visibility] ? `<strong class="equipment-pill">${visibilityLabel[load.visibility]}</strong>` : ''}
           <div class="route-cities"><span>${escapeHtml(load.origin)}</span><span class="route-arrow" aria-hidden="true">→</span><span>${escapeHtml(load.destination)}</span></div>
         </div>
         <div class="load-detail"><span class="detail-label">RECOGIDA</span><span class="detail-value">${escapeHtml(formatDate(load.pickupDate))}</span></div>
@@ -260,7 +267,8 @@ loadList.addEventListener('click', async event => {
       for (const quote of result.quotes) {
         const row = document.createElement('li');
         const gold = quote.priority === 2 ? ' · Verificado Oro' : '';
-        row.textContent = quote.name + ' · ' + quote.email + ' · ' + formatCurrency(quote.amountCents / 100, result.currency) + gold;
+        const score = quote.rating != null ? ' · ' + quote.rating.toFixed(1) + '/5' : '';
+        row.textContent = quote.name + ' · ' + quote.email + ' · ' + formatCurrency(quote.amountCents / 100, result.currency) + gold + score;
         list.append(row);
       }
       if (!result.quotes.length) {
@@ -283,6 +291,10 @@ loadList.addEventListener('click', async event => {
   const recentlyPublished = Date.now() < Date.parse(load.createdAt) + starterQuoteDelay;
   if (load.corporate && viewerPlan !== 'elite') {
     showQuoteNotice('Este es un flete corporativo exclusivo para miembros Elite (con Récord de Policía verificado). Sube tu Récord de Policía y activa tu plan para cotizar ahora.', true);
+    return;
+  }
+  if (load.customerType === 'comercio' && !viewerPlan) {
+    showQuoteNotice('Para cotizar fletes de pequeños comercios, activa Chofer Pro o Flota / Elite.', false);
     return;
   }
   if (!viewerPlan && recentlyPublished) {
@@ -380,6 +392,7 @@ function workflowControls(load) {
   }
   if (load.isOwner && load.status === 'entregada' && load.hasDeliveryEvidence) html += button('complete', 'Confirmar entrega');
   if (load.isOwner && load.status === 'finalizada') html += button('transfer', 'Datos para transferir el flete');
+  if (load.isOwner && load.status === 'finalizada' && load.rating == null) html += button('rate', 'Calificar transportista');
   return html;
 }
 function workflowSummary(load) {
@@ -390,7 +403,8 @@ function workflowSummary(load) {
   const evidence = load.hasDeliveryEvidence
     ? `<span><a href="${evidenceUrl}receipt" target="_blank" rel="noopener">Ver documento de recibido</a> · <a href="${evidenceUrl}cargo" target="_blank" rel="noopener">Ver foto de la carga</a></span>`
     : '';
-  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + evidence;
+  const rating = load.rating != null ? '<span>Calificación del transportista: ' + escapeHtml(load.rating) + '/5</span>' : '';
+  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + evidence + rating;
 }
 async function workflowRequest(id, payload) {
   const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -413,6 +427,13 @@ loadList.addEventListener('click', async event => {
   const load = loads.find(item => item.id === button.dataset.load);
   if (!load || workflowBusy.has(load.id)) return;
   const action = button.dataset.workflow;
+  if (action === 'rate') {
+    ratingForm.reset();
+    ratingForm.dataset.load = load.id;
+    document.querySelector('#rating-error').textContent = '';
+    ratingDialog.showModal();
+    return;
+  }
   if (action === 'transfer') {
     workflowBusy.add(load.id);
     button.disabled = true;
@@ -494,6 +515,26 @@ loadList.addEventListener('submit', async event => {
   }
 });
 document.querySelector('#assign-close').addEventListener('click', () => { if (!workflowBusy.has(assigningId)) assignDialog.close(); });
+document.querySelector('#rating-close').addEventListener('click', () => ratingDialog.close());
+ratingForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = ratingForm.querySelector('[type="submit"]');
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/loads/' + encodeURIComponent(ratingForm.dataset.load) + '/rating', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ score: Number(ratingForm.elements.score.value) }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    ratingDialog.close();
+    await refreshLoads();
+    showToast('Calificación guardada.');
+  } catch (error) {
+    document.querySelector('#rating-error').textContent = error.message || 'No pudimos guardar la calificación.';
+  } finally {
+    button.disabled = false;
+  }
+});
 assignDialog.addEventListener('cancel', event => { if (workflowBusy.has(assigningId)) event.preventDefault(); });
 assignForm.elements.namedItem('carrierEmail').addEventListener('input', () => {
   assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Vuelve a consultar este correo</option>';
@@ -552,6 +593,10 @@ async function openPostDialog() {
     if (!postForm.elements.namedItem('company').value) postForm.elements.namedItem('company').value = currentUser.name;
     if (!postForm.elements.namedItem('email').value) postForm.elements.namedItem('email').value = currentUser.email;
   }
+  const visibility = postForm.elements.namedItem('visibility');
+  visibility.querySelector('[value="destacada"]').disabled = !['negocio', 'corporativo'].includes(viewerPlan);
+  visibility.querySelector('[value="vip"]').disabled = viewerPlan !== 'corporativo';
+  if (visibility.selectedOptions[0]?.disabled) visibility.value = 'estandar';
   const dateInput = postForm.elements.namedItem("pickupDate");
   const parts = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Managua', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
   const localToday = ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
@@ -583,6 +628,8 @@ postForm.addEventListener("submit", async (event) => {
     pay: Number(formData.get("pay")),
     currency: 'USD',
     company: String(formData.get("company")).trim(),
+    customerType: String(formData.get("customerType")),
+    visibility: String(formData.get("visibility")),
     email: String(formData.get("email")).trim(),
   };
 

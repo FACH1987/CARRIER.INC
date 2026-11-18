@@ -60,6 +60,12 @@ export const loadQuotes = sqliteTable('load_quotes', {
   createdAt: text('created_at').notNull(),
   priority: integer('priority').notNull(),
 }, (t) => [uniqueIndex('load_quotes_carrier_load').on(t.carrierId, t.loadId), index('load_quotes_carrier_date').on(t.carrierId, t.createdAt)]);
+export const carrierRatings = sqliteTable('carrier_ratings', {
+  loadId: text('load_id').primaryKey().references(() => loads.id),
+  carrierId: text('carrier_id').notNull().references(() => users.id),
+  score: integer('score').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (t) => [index('carrier_ratings_carrier').on(t.carrierId)]);
 export const carrierDrivers = sqliteTable('carrier_drivers', {
   id: text('id').primaryKey(), userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(), categories: text('categories').notNull()
@@ -106,6 +112,8 @@ export const loads = sqliteTable('loads', {
   weight: real('weight').notNull(), pay: real('pay').notNull(),
   currency: text('currency', { enum: ['NIO', 'USD'] }).notNull().default('NIO'),
   company: text('company').notNull(), email: text('email').notNull(),
+  customerType: text('customer_type', { enum: ['particular', 'comercio', 'empresa'] }),
+  visibility: text('visibility', { enum: ['estandar', 'destacada', 'vip'] }).notNull().default('estandar'),
   createdAt: text('created_at').notNull(),
   status: text('status', { enum: ['disponible', 'asignada', 'en_transito', 'entregada', 'finalizada'] }).notNull().default('disponible'),
   carrierId: text('carrier_id').references(() => users.id, { onDelete: 'restrict' }),

@@ -119,6 +119,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
     });
     await t.test('publishes cargo and requires an account to read it', async () => {
       const cargo = { origin: 'Managua', destination: 'León', pickupDate: '2099-12-01', equipment: 'Furgon Seco 53"', weight: 1200, pay: 5000, currency: 'USD', company: 'Local integration test', email };
+      assert.equal((await api('/api/loads', { method: 'POST', body: { ...cargo, visibility: 'vip' }, cookie })).status, 403);
       assert.equal((await api('/api/loads', { method: 'POST', body: { ...cargo, currency: 'NIO' }, cookie })).status, 400);
       assert.equal((await api('/api/loads', { method: 'POST', body: { ...cargo, equipment: 'Refrigerado' }, cookie })).status, 400);
       const response = await api('/api/loads', { method: 'POST', body: cargo, cookie });
@@ -532,6 +533,13 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await act('complete', carrierSession)).status, 403);
       const completed = await Promise.all([act('complete'), act('complete')]);
       assert(completed.every(result => result.status === 200));
+      const ratingPath = '/api/loads/' + financialLoad.id + '/rating';
+      const rateCarrier = session => api(ratingPath, { method: 'POST', cookie: session, body: { score: 5 } });
+      assert.equal((await rateCarrier(carrierSession)).status, 403);
+      assert.equal((await rateCarrier(cookie)).status, 201);
+      assert.equal((await rateCarrier(cookie)).status, 409);
+      const rankedQuotes = await (await api(quotesPath, { cookie })).json();
+      assert.equal(rankedQuotes.quotes[0].rating, 5);
       assert.equal((await saveReceivingAccount({ ...receivingAccount, currency: 'NIO' })).status, 200);
       assert.equal((await transferDetails(cookie)).status, 409);
       assert.equal((await saveReceivingAccount(receivingAccount)).status, 200);
@@ -575,6 +583,14 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await verifySubscription(subscriptionPayment)).status, 200);
       const activeSubscription = (await (await api(subscriptions, { cookie })).json()).active;
       assert.equal(activeSubscription.plan, 'negocio');
+      const featured = await api('/api/loads', { method: 'POST', cookie,
+        body: { ...freight, customerType: 'comercio', visibility: 'destacada' } });
+      assert.equal(featured.status, 201);
+      const featuredLoad = (await featured.json()).load;
+      const featuredListing = (await (await api('/api/loads', { cookie })).json()).loads.find(row => row.id === featuredLoad.id);
+      assert.equal(featuredListing.customerType, 'comercio');
+      assert.equal(featuredListing.visibility, 'destacada');
+      assert.equal(featuredListing.corporate, false);
       const excelReport = await runtime.dispatchFetch(reportUrl, { headers: { Cookie: cookie } });
       assert.equal(excelReport.status, 200);
       assert.match(excelReport.headers.get('content-disposition'), /fletes\.xml/);

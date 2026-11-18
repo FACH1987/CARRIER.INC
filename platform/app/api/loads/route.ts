@@ -1,6 +1,6 @@
 import { usesSupabase } from '../../../db/supabase';
 import { getDb } from '../../../db';
-import { loads, users, carrierVehicles, carrierDrivers } from '../../../db/schema';
+import { loads, users, carrierVehicles, carrierDrivers, carrierRatings } from '../../../db/schema';
 import { and, desc, eq, gte, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { carrierDossier, requireCarrierReady } from '../../../lib/carrier-compli
 import { AuthError } from '../../../lib/account-auth';
 import { equipmentTypes } from '../../../lib/equipment';
 import { activePlan, nicaraguaMonthStart } from '../../../lib/subscriptions';
+import { customerTypeFor, customerTypes, loadVisibilities } from '../../../lib/load-access';
 
 export const dynamic = 'force-dynamic';
 const dayInNicaragua = () => {
@@ -26,7 +27,9 @@ const schema = z.object({
   weight: z.number().finite().positive().max(100000),
   pay: z.number().finite().min(1).max(1000000).refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 0.000001),
   currency: z.literal('USD'),
-  company: text(80), email: z.string().trim().email().max(120)
+  company: text(80), email: z.string().trim().email().max(120),
+  customerType: z.enum(customerTypes).optional(),
+  visibility: z.enum(loadVisibilities).default('estandar'),
 });
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Vary': 'Cookie' } });
 
@@ -41,18 +44,21 @@ export async function GET(request: Request) {
     const owner = `account:${user.id}`;
     const db = getDb();
     const publisher = alias(users, 'publisher');
-    const data = await db.select({ load: loads, publisherRole: publisher.role, carrierName: users.name, carrierEmail: users.email, vehiclePlate: carrierVehicles.plate, driverName: carrierDrivers.name, licenseCategory: carrierVehicles.requiredCategory }).from(loads).leftJoin(users, eq(loads.carrierId, users.id)).leftJoin(publisher, eq(publisher.id, sql<string>`substr(${loads.ownerId}, 9)`)).leftJoin(carrierVehicles, eq(loads.transportVehicleId, carrierVehicles.id)).leftJoin(carrierDrivers, eq(loads.transportDriverId, carrierDrivers.id))
-      .where(mine ? or(eq(loads.ownerId, owner), eq(loads.carrierId, user.id)) : and(gte(loads.pickupDate, dayInNicaragua()), eq(loads.status, 'disponible'))).orderBy(desc(loads.createdAt)).limit(500);
-    const visible = data.map(({ load, publisherRole, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
+    const data = await db.select({ load: loads, rating: carrierRatings.score, publisherRole: publisher.role, carrierName: users.name, carrierEmail: users.email, vehiclePlate: carrierVehicles.plate, driverName: carrierDrivers.name, licenseCategory: carrierVehicles.requiredCategory }).from(loads).leftJoin(users, eq(loads.carrierId, users.id)).leftJoin(publisher, eq(publisher.id, sql<string>`substr(${loads.ownerId}, 9)`)).leftJoin(carrierVehicles, eq(loads.transportVehicleId, carrierVehicles.id)).leftJoin(carrierDrivers, eq(loads.transportDriverId, carrierDrivers.id)).leftJoin(carrierRatings, eq(loads.id, carrierRatings.loadId))
+      .where(mine ? or(eq(loads.ownerId, owner), eq(loads.carrierId, user.id)) : and(gte(loads.pickupDate, dayInNicaragua()), eq(loads.status, 'disponible')))
+      .orderBy(...(mine ? [] : [sql`CASE ${loads.visibility} WHEN 'vip' THEN 0 WHEN 'destacada' THEN 1 ELSE 2 END`]), desc(loads.createdAt)).limit(500);
+    const visible = data.map(({ load, rating, publisherRole, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
       const own = user.role !== 'administrador' && load.ownerId === owner;
       const assigned = user.role !== 'administrador' && load.carrierId === user.id;
       const { ownerId, carrierId, deliveryEvidenceId, feeRateBps, feeCents, feeAcceptedAt, ...record } = load;
       const available = own && load.status === 'disponible';
-      return { ...record, corporate: publisherRole === 'empresa', carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned,
+      const customerType = customerTypeFor(load.customerType, publisherRole);
+      return { ...record, customerType, corporate: customerType === 'empresa', carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned,
+        rating: own ? rating : null,
         canDelete: available, canAssign: available && schema.shape.pay.safeParse(load.pay).success,
         hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId) };
     });
-    return json({ loads: visible, plan: user.role === 'transportista' ? await activePlan(user.id) : null, signedIn: Boolean(user), user });
+    return json({ loads: visible, plan: await activePlan(user.id), signedIn: Boolean(user), user });
   } catch (error) {
     console.error('No se pudieron consultar las cargas', error);
     return json({ error: 'No pudimos consultar las cargas. Intenta de nuevo.' }, 503);
@@ -82,14 +88,19 @@ export async function POST(request: Request) {
     if (!parsed.success) return json({ error: 'Revisa los datos e indica el flete en USD.' }, 400);
     const details = parsed.data;
     const now = new Date().toISOString();
-    const load = { ...details, id: crypto.randomUUID(), createdAt: now, status: 'disponible' as const };
     const plan = await activePlan(user.id, now);
+    if ((details.visibility === 'vip' && plan !== 'corporativo') ||
+        (details.visibility === 'destacada' && plan !== 'negocio' && plan !== 'corporativo')) {
+      return json({ error: 'La visibilidad seleccionada no está incluida en tu plan.' }, 403);
+    }
+    const load = { ...details, customerType: customerTypeFor(details.customerType ?? null, user.role),
+      id: crypto.randomUUID(), createdAt: now, status: 'disponible' as const };
     const limit = user.role === 'empresa' ? (plan === 'corporativo' ? null : plan === 'negocio' ? 25 : 3) : 10;
     const since = user.role === 'empresa' ? nicaraguaMonthStart() : new Date(Date.parse(now) - 86400000).toISOString();
     const [published] = await getDb().all<{ id: string }>(sql`
-      INSERT INTO loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, currency, company, email, created_at, status, fee_rate_bps)
+      INSERT INTO loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, currency, company, email, created_at, status, fee_rate_bps, customer_type, visibility)
       SELECT ${load.id}, ${ownerId}, ${load.origin}, ${load.destination}, ${load.pickupDate}, ${load.equipment},
-        ${load.weight}, ${load.pay}, ${load.currency}, ${load.company}, ${load.email}, ${now}, 'disponible', 0
+        ${load.weight}, ${load.pay}, ${load.currency}, ${load.company}, ${load.email}, ${now}, 'disponible', 0, ${load.customerType}, ${load.visibility}
       WHERE ${limit === null ? sql`1` : sql`(SELECT count(*) FROM load_publications WHERE owner_id = ${ownerId} AND created_at >= ${since}) < ${limit}`}
       RETURNING id
     `);

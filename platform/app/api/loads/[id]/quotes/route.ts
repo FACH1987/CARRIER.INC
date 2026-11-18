@@ -5,6 +5,7 @@ import { loadQuotes, loads, users } from '../../../../../db/schema';
 import { AuthError, authFailure, currentAccount, readAuthJson, responseJson } from '../../../../../lib/account-auth';
 import { carrierDossier, todayNI } from '../../../../../lib/carrier-compliance';
 import { activePlan, nicaraguaMonthStart } from '../../../../../lib/subscriptions';
+import { customerTypeFor } from '../../../../../lib/load-access';
 
 export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ id: string }> };
@@ -25,10 +26,11 @@ export async function GET(request: Request, context: Context) {
     if (!account) throw new AuthError('Inicia sesión.', 401);
     const { load } = await readLoad(context);
     if (load.ownerId !== `account:${account.id}`) throw new AuthError('Solo quien publicó la carga puede ver las cotizaciones.', 403);
+    const rating = sql<number | null>`(SELECT avg(score) FROM carrier_ratings WHERE carrier_id = ${loadQuotes.carrierId})`;
     const quotes = await getDb().select({
-      name: users.name, email: users.email, amountCents: loadQuotes.amountCents, priority: loadQuotes.priority,
+      name: users.name, email: users.email, amountCents: loadQuotes.amountCents, priority: loadQuotes.priority, rating,
     }).from(loadQuotes).innerJoin(users, eq(users.id, loadQuotes.carrierId))
-      .where(eq(loadQuotes.loadId, load.id)).orderBy(desc(loadQuotes.priority), asc(loadQuotes.createdAt)).limit(100);
+      .where(eq(loadQuotes.loadId, load.id)).orderBy(desc(loadQuotes.priority), desc(rating), asc(loadQuotes.createdAt)).limit(100);
     return responseJson({ quotes, currency: load.currency });
   } catch (error) { return authFailure(error); }
 }
@@ -49,7 +51,9 @@ export async function POST(request: Request, context: Context) {
     const dossier = await carrierDossier(account.id, load.pickupDate);
     const compatible = dossier.vehicles.filter(vehicle => vehicle.ready && vehicle.equipment === load.equipment && vehicle.capacityKg >= load.weight);
     const gold = plan === 'elite' && compatible.some(vehicle => vehicle.policeVerified);
-    if (publisherRole === 'empresa' && !gold) throw new AuthError('Este es un flete corporativo exclusivo para miembros Elite (con Récord de Policía verificado). Sube tu Récord de Policía y activa tu plan para cotizar ahora.', 403);
+    const customerType = customerTypeFor(load.customerType, publisherRole);
+    if (customerType === 'empresa' && !gold) throw new AuthError('Este es un flete corporativo exclusivo para miembros Elite (con Récord de Policía verificado). Sube tu Récord de Policía y activa tu plan para cotizar ahora.', 403);
+    if (customerType === 'comercio' && !plan) throw new AuthError('Para cotizar fletes de pequeños comercios, activa Chofer Pro o Flota / Elite.', 403);
     const delay = gold ? 0 : plan === 'chofer-pro' ? 5 : 15;
     if (Date.parse(now) < Date.parse(load.createdAt) + delay * 60_000) {
       throw new AuthError(`Este flete está en acceso anticipado. Podrás cotizar a partir de ${delay} minutos después de su publicación.`, 403);

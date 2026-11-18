@@ -12,7 +12,7 @@
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=carrier-1">
     <link rel="stylesheet" href="plans.css">
-    <script src="app.js?v=plan-benefits-1" defer></script>
+    <script src="app.js?v=market-segments-1" defer></script>
   <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
   <body>
     <header class="topbar">
@@ -151,7 +151,7 @@
         <header class="plans-intro">
           <h2 id="plans-title">Planes para empresas y transportistas</h2>
           <p>Publica tu primera carga o encuentra tu próximo viaje gratis. La empresa paga el flete directamente al transportista, sin comisión por viaje.</p>
-          <p class="plans-note">Ya están disponibles los cupos de publicaciones y vehículos, las cotizaciones por plan, la revisión del Récord de Policía para Elite y los reportes de fletes para empresas suscritas. Los demás beneficios de las tablas están en preparación.</p>
+          <p class="plans-note">Ya están disponibles los cupos, las cotizaciones por tipo de cliente, la revisión del Récord de Policía para Elite, los reportes y la visibilidad destacada y VIP en el tablero. Los avisos por cercanía, el GPS, la firma de entrega, los equipos de empresa y el soporte por plan están en preparación.</p>
           <a class="button button-light" href="subscriptions.html">Gestionar suscripción</a>
         </header>
         <section class="plans-group" aria-labelledby="plans-empresa">
@@ -184,7 +184,7 @@
               <tbody>
                 <tr><th scope="row">Visualización de viajes</th><td>Mapa y lista</td><td>Mapa y lista</td><td>Mapa y lista</td></tr>
                 <tr><th scope="row">Avisos de viajes</th><td>Con 15 minutos de retraso</td><td>Al instante</td><td>Acceso VIP 5 minutos antes</td></tr>
-                <tr><th scope="row">Postulaciones y cotizaciones</th><td>Hasta 3 al mes</td><td>Ilimitadas en fletes particulares</td><td>Ilimitadas para particulares y empresas</td></tr>
+                <tr><th scope="row">Postulaciones y cotizaciones</th><td>Hasta 3 al mes</td><td>Ilimitadas para particulares y pequeños comercios</td><td>Ilimitadas para particulares, comercios y empresas</td></tr>
                 <tr><th scope="row">Clientes disponibles</th><td>Particulares y mudanzas</td><td>Particulares y pequeños comercios</td><td>Incluye acceso exclusivo a empresas y ferreterías</td></tr>
                 <tr><th scope="row">Documentos del plan</th><td>Cédula, licencia y circulación</td><td>Cédula, licencia y circulación</td><td>Los anteriores y récord policial vigente</td></tr>
                 <tr><th scope="row">Posición al cotizar</th><td>Estándar, después de los niveles superiores</td><td>Intermedia</td><td>Prioritaria y sello Verificado Oro sujeto a revisión</td></tr>
@@ -211,7 +211,9 @@
           <label class="form-field"><span>Tipo de equipo</span><select name="equipment" required><option value="">Selecciona equipo</option><option value="Furgon Seco 53&quot;">Furgon Seco 53&quot;</option><option value="Furgon Refrigerado 53&quot;">Furgon Refrigerado 53&quot;</option><option value="Furgon Plataforma">Furgon Plataforma</option><option value="Camion 12 TNL Refrigerado">Camion 12 TNL Refrigerado</option><option value="Camion 12 TNL Seco">Camion 12 TNL Seco</option><option value="Camion 9.5 TNL Refrigerado">Camion 9.5 TNL Refrigerado</option><option value="Camion 9.5 TNL Seco">Camion 9.5 TNL Seco</option><option value="Camion 8 TNL Refrigerado">Camion 8 TNL Refrigerado</option><option value="Camion 8 TNL Seco">Camion 8 TNL Seco</option><option value="Camion 6 TNL Refrigerado">Camion 6 TNL Refrigerado</option><option value="Camion 6 TNL Seco">Camion 6 TNL Seco</option><option value="Camion 5 TNL Refrigerado">Camion 5 TNL Refrigerado</option><option value="Camion 5 TNL Seco">Camion 5 TNL Seco</option><option value="Camion 4.5 TNL Refrigerado">Camion 4.5 TNL Refrigerado</option><option value="Camion 4.5 TNL Seco">Camion 4.5 TNL Seco</option></select></label>
           <label class="form-field"><span>Peso (kg)</span><input name="weight" type="number" min="1" max="100000" required placeholder="Peso total en kg"></label>
           <label class="form-field"><span>Flete para el transportista (USD)</span><input name="pay" type="number" min="1" max="1000000" step="0.01" required></label>
-          <label class="form-field"><span>Nombre de la empresa</span><input name="company" required maxlength="80" placeholder="Nombre de tu empresa"></label>
+          <label class="form-field"><span>Nombre del cliente o empresa</span><input name="company" required maxlength="80"></label>
+          <label class="form-field"><span>Tipo de cliente</span><select name="customerType" required><option value="empresa">Empresa o ferretería</option><option value="comercio">Pequeño comercio</option><option value="particular">Particular o mudanza</option></select></label>
+          <label class="form-field"><span>Visibilidad en el tablero</span><select name="visibility" required><option value="estandar">Estándar</option><option value="destacada" disabled>Destacada · Negocio</option><option value="vip" disabled>Urgente / VIP · Corporativo</option></select></label>
           <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="Tu correo de contacto"></label>
         </div>
         <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán visibles para usuarios registrados. Para publicar necesitas una cuenta de Carrier.INC. El contacto abre la aplicación de correo.</p>
@@ -279,5 +281,13 @@
       </form>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <dialog class="post-dialog account-dialog" id="rating-dialog" aria-labelledby="rating-title">
+      <form class="post-form" id="rating-form">
+        <h2 id="rating-title">Calificar al transportista</h2>
+        <label class="form-field"><span>Calificación del flete finalizado</span><select name="score" required><option value="">Selecciona</option><option value="5">5 · Excelente</option><option value="4">4 · Bueno</option><option value="3">3 · Regular</option><option value="2">2 · Malo</option><option value="1">1 · Muy malo</option></select></label>
+        <p id="rating-error" role="alert"></p>
+        <div class="dialog-actions"><button class="button button-light" type="button" id="rating-close">Cancelar</button><button class="button button-dark" type="submit">Guardar calificación</button></div>
+      </form>
+    </dialog>
   </body>
 </html>
