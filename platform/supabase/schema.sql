@@ -273,7 +273,8 @@ CREATE TABLE public."support_messages" (
   "from_support" bigint NOT NULL DEFAULT 0,
   "body" text NOT NULL,
   "created_at" text NOT NULL,
-  "priority" bigint NOT NULL DEFAULT 0
+  "priority" bigint NOT NULL DEFAULT 0,
+  "kind" text NOT NULL DEFAULT 'message'
 );
 CREATE INDEX "support_messages_user_date" ON public."support_messages" ("user_id", "created_at");
 ALTER TABLE public."support_messages" ENABLE ROW LEVEL SECURITY;

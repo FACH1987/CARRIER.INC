@@ -624,12 +624,18 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(activeSubscription.plan, 'negocio');
       const supportPath = '/api/support';
       assert.equal((await api(supportPath, { method: 'POST', cookie, body: { body: 'Consulta de prueba' } })).status, 201);
+      assert.equal((await api(supportPath, { method: 'POST', cookie, body: { body: 'El mapa se queda en blanco.', kind: 'app_issue' } })).status, 201);
       const supportInbox = await (await api(supportPath, { cookie: adminCookie })).json();
       const supportThread = supportInbox.conversations.find(thread => thread.priority === 1);
       assert(supportThread);
+      assert.equal(supportThread.pendingReport, true);
       assert.equal((await api(supportPath + '?userId=' + supportThread.id, { cookie: carrierSession })).status, 403);
       assert.equal((await api(supportPath, { method: 'POST', cookie: adminCookie, body: { userId: supportThread.id, body: 'Respuesta de prueba' } })).status, 201);
-      assert((await (await api(supportPath, { cookie })).json()).messages.some(message => message.fromSupport));
+      const ownSupport = await (await api(supportPath, { cookie })).json();
+      assert(ownSupport.messages.some(message => message.fromSupport));
+      assert(ownSupport.messages.some(message => message.kind === 'app_issue'));
+      const answeredInbox = await (await api(supportPath, { cookie: adminCookie })).json();
+      assert.equal(answeredInbox.conversations.find(thread => thread.id === supportThread.id).pendingReport, false);
       const featured = await api('/api/loads', { method: 'POST', cookie,
         body: { ...freight, customerType: 'comercio', visibility: 'destacada' } });
       assert.equal(featured.status, 201);

@@ -145,6 +145,7 @@ export const supportMessages = sqliteTable('support_messages', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   fromSupport: integer('from_support', { mode: 'boolean' }).notNull().default(false),
   body: text('body').notNull(),
+  kind: text('kind', { enum: ['message', 'app_issue'] }).notNull().default('message'),
   createdAt: text('created_at').notNull(),
   priority: integer('priority').notNull().default(0),
 }, (t) => [index('support_messages_user_date').on(t.userId, t.createdAt)]);

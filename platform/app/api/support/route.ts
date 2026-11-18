@@ -7,7 +7,8 @@ import { AuthError, authFailure, checkAuthLimit, currentAccount, readAuthJson, r
 import { activePlan } from '../../../lib/subscriptions';
 
 export const dynamic = 'force-dynamic';
-const messageSchema = z.object({ body: z.string().trim().min(2).max(800), userId: z.string().uuid().optional() });
+const messageSchema = z.object({ body: z.string().trim().min(2).max(800), userId: z.string().uuid().optional(),
+  kind: z.enum(['message', 'app_issue']).default('message') });
 const config = env as unknown as { SUPPORT_EXECUTIVE?: string };
 
 export async function GET(request: Request) {
@@ -20,13 +21,16 @@ export async function GET(request: Request) {
     if (account.isAdmin && !target) {
       const priority = sql<number>`max(${supportMessages.priority})`;
       const latest = sql<string>`max(${supportMessages.createdAt})`;
-      const conversations = await db.select({ id: users.id, name: users.name, priority }).from(supportMessages)
+      const lastReport = sql<string | null>`max(case when ${supportMessages.kind} = 'app_issue' then ${supportMessages.createdAt} end)`;
+      const lastReply = sql<string | null>`max(case when ${supportMessages.fromSupport} = 1 then ${supportMessages.createdAt} end)`;
+      const pendingReport = sql<boolean>`coalesce(${lastReport} > coalesce(${lastReply}, ''), 0)`.mapWith(Boolean);
+      const conversations = await db.select({ id: users.id, name: users.name, priority, pendingReport }).from(supportMessages)
         .innerJoin(users, eq(users.id, supportMessages.userId)).groupBy(users.id, users.name)
-        .orderBy(desc(priority), desc(latest)).limit(100);
+        .orderBy(desc(priority), desc(pendingReport), desc(latest)).limit(100);
       return responseJson({ admin: true, conversations });
     }
     const messages = await db.select({ id: supportMessages.id, body: supportMessages.body,
-      fromSupport: supportMessages.fromSupport, createdAt: supportMessages.createdAt }).from(supportMessages)
+      fromSupport: supportMessages.fromSupport, createdAt: supportMessages.createdAt, kind: supportMessages.kind }).from(supportMessages)
       .where(eq(supportMessages.userId, target || account.id)).orderBy(desc(supportMessages.createdAt), asc(supportMessages.id)).limit(100);
     const plan = target ? null : await activePlan(account.id);
     return responseJson({ admin: account.isAdmin, plan, messages: messages.reverse(),
@@ -40,8 +44,9 @@ export async function POST(request: Request) {
     if (!account) throw new AuthError('Inicia sesión para acceder al soporte.', 401);
     const parsed = messageSchema.safeParse(await readAuthJson(request));
     if (!parsed.success) throw new AuthError('Escribe un mensaje de hasta 800 caracteres.');
-    const { body, userId } = parsed.data;
+    const { body, userId, kind } = parsed.data;
     if (Boolean(userId) !== account.isAdmin) throw new AuthError('Acceso privado.', 403);
+    if (account.isAdmin && kind !== 'message') throw new AuthError('Envía una respuesta de soporte.');
     await checkAuthLimit('support-message', account.id, 60, 3600);
     const db = getDb();
     if (userId) {
@@ -52,7 +57,7 @@ export async function POST(request: Request) {
     const plan = await activePlan(userId || account.id);
     const priority = plan === 'corporativo' ? 2 : plan === 'negocio' ? 1 : 0;
     await db.insert(supportMessages).values({ id: crypto.randomUUID(), userId: userId || account.id,
-      fromSupport: account.isAdmin, body, priority, createdAt: new Date().toISOString() });
+      fromSupport: account.isAdmin, body, kind, priority, createdAt: new Date().toISOString() });
     return responseJson({ saved: true }, 201);
   } catch (error) { return authFailure(error); }
 }
