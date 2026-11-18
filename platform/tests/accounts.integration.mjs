@@ -282,7 +282,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(namedAdmin.users[0].id, adminId);
       const companies = await (await api('/api/admin/users?role=empresa', { cookie: adminCookie })).json();
       assert(!companies.users.some(row => row.id === adminId));
-      for (const row of data.users) assert.deepEqual(Object.keys(row).sort(), ['canDelete', 'createdAt', 'email', 'id', 'isAdmin', 'name', 'role']);
+      for (const row of data.users) assert.deepEqual(Object.keys(row).sort(), ['canDelete', 'createdAt', 'email', 'id', 'isAdmin', 'name', 'phone', 'phoneVerifiedAt', 'role']);
       assert(!JSON.stringify(data).includes(passwordRow.password_hash));
       const carriers = await (await api('/api/admin/users?role=transportista', { cookie: adminCookie })).json();
       assert(carriers.users.length > 0 && carriers.users.every(row => row.role === 'transportista'));
