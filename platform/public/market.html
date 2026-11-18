@@ -11,7 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=carrier-1">
-    <script src="app.js?v=direct-1" defer></script>
+    <link rel="stylesheet" href="plans.css">
+    <script src="app.js?v=plans-1" defer></script>
   <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
   <body>
     <header class="topbar">
@@ -22,6 +23,7 @@
       <nav class="main-nav" aria-label="Navegación principal">
         <a class="nav-link active" href="#cargas">Buscar cargas</a>
         <a class="nav-link" href="#como-funciona">Cómo funciona</a>
+        <a class="nav-link" href="#planes">Planes</a>
       </nav>
       <div class="top-actions"><div id="document-notices" hidden></div><a id="bank-open" class="button button-light button-small" href="bank.html" hidden>Cuenta bancaria</a><a id="carrier-open" class="button button-light button-small" href="carrier.html" hidden>Mi expediente</a><a id="commissions-open" class="button button-light button-small" href="commissions.html" hidden>Historial de comisiones</a><a id="admin-open" class="button button-light button-small" href="admin.html" hidden>Usuarios</a><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
         <button class="button button-outline button-small" id="open-post-top" type="button">Publicar carga <span aria-hidden="true">↗</span></button>
@@ -144,6 +146,52 @@
           <article class="step-card"><div class="step-number">02 <span>—</span></div><div class="step-icon contact-step-icon" aria-hidden="true">↗</div><h3>Publica tu envío</h3><p>Empresas: publica el origen, destino, fecha y detalles de tu envío para presentar tu necesidad a los transportistas.</p></article>
           <article class="step-card"><div class="step-number">03 <span>—</span></div><div class="step-icon" aria-hidden="true">✓</div><h3>Cierra el trato</h3><p>Acuerda los detalles directamente y ponte en marcha. Así de sencillo es mover el negocio.</p></article>
         </div>
+      </section>
+      <section class="plans-section" id="planes" aria-labelledby="plans-title">
+        <header class="plans-intro">
+          <h2 id="plans-title">Planes para empresas y transportistas</h2>
+          <p>Publica tu primera carga o encuentra tu próximo viaje gratis. La empresa paga el flete directamente al transportista, sin comisión por viaje.</p>
+          <p class="plans-note">El registro gratuito está disponible. Los precios, cupos y beneficios de las tablas corresponden al catálogo propuesto. Las suscripciones de pago todavía no están activas y los requisitos del expediente vigente se aplican al registrarte.</p>
+        </header>
+        <section class="plans-group" aria-labelledby="plans-empresa">
+          <div class="plans-heading">
+            <h3 id="plans-empresa">Empresas</h3>
+            <button class="button button-dark" type="button" data-plan-register="empresa">Registrarme como empresa</button>
+          </div>
+          <div class="plans-scroll" role="region" aria-label="Comparación de planes para empresas" tabindex="0">
+            <table class="plans-table">
+              <thead><tr><th scope="col">Característica</th><th scope="col">Inicial<span>Gratis</span></th><th scope="col">Negocio<span>US$30/mes</span></th><th scope="col">Corporativo<span>US$68/mes</span></th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Publicaciones de fletes</th><td>Hasta 3 al mes</td><td>Hasta 25 al mes</td><td>Ilimitadas</td></tr>
+                <tr><th scope="row">Acceso a transportistas</th><td>Verificación básica de cédula, licencia y circulación</td><td>Verificación Oro, con récord policial y seguro</td><td>Flota Elite prioritaria, con mejores calificaciones y récord policial</td></tr>
+                <tr><th scope="row">Visibilidad de la carga</th><td>Estándar</td><td>Destacada, con aviso rápido a conductores cercanos</td><td>Urgente o VIP, con alerta sonora en un radio de 5 km</td></tr>
+                <tr><th scope="row">Usuarios y sucursales</th><td>1 usuario</td><td>Hasta 3 usuarios</td><td>Usuarios y sucursales ilimitados</td></tr>
+                <tr><th scope="row">Control y comprobantes</th><td>Historial básico de viajes</td><td>Reportes de gastos en Excel y PDF</td><td>Rastreo GPS en vivo y comprobante digital con foto y firma</td></tr>
+                <tr><th scope="row">Soporte</th><td>Chat en la app</td><td>WhatsApp prioritario</td><td>Ejecutivo de cuenta dedicado</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="plans-group" aria-labelledby="plans-transportista">
+          <div class="plans-heading">
+            <h3 id="plans-transportista">Transportistas</h3>
+            <button class="button button-dark" type="button" data-plan-register="transportista">Registrarme como transportista</button>
+          </div>
+          <div class="plans-scroll" role="region" aria-label="Comparación de planes para transportistas" tabindex="0">
+            <table class="plans-table">
+              <thead><tr><th scope="col">Característica</th><th scope="col">Arrancador<span>Gratis</span></th><th scope="col">Chofer Pro<span>US$20/mes</span></th><th scope="col">Flota / Elite<span>US$40/mes</span></th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Visualización de viajes</th><td>Mapa y lista</td><td>Mapa y lista</td><td>Mapa y lista</td></tr>
+                <tr><th scope="row">Avisos de viajes</th><td>Con 15 minutos de retraso</td><td>Al instante</td><td>Acceso VIP 5 minutos antes</td></tr>
+                <tr><th scope="row">Postulaciones y cotizaciones</th><td>Hasta 3 al mes</td><td>Ilimitadas en fletes particulares</td><td>Ilimitadas para particulares y empresas</td></tr>
+                <tr><th scope="row">Clientes disponibles</th><td>Particulares y mudanzas</td><td>Particulares y pequeños comercios</td><td>Incluye acceso exclusivo a empresas y ferreterías</td></tr>
+                <tr><th scope="row">Documentos del plan</th><td>Cédula, licencia y circulación</td><td>Cédula, licencia y circulación</td><td>Los anteriores y récord policial vigente</td></tr>
+                <tr><th scope="row">Posición al cotizar</th><td>Estándar, después de los niveles superiores</td><td>Intermedia</td><td>Prioritaria y sello Verificado Oro sujeto a revisión</td></tr>
+                <tr><th scope="row">Vehículos</th><td>1 vehículo</td><td>1 vehículo</td><td>Hasta 3 vehículos</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
 

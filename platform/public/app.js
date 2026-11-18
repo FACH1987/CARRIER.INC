@@ -42,6 +42,7 @@ function setAccount(user) {
   const changed = currentUser?.id !== user?.id || currentUser?.role !== user?.role;
   currentUser = user;
   signedIn = Boolean(user);
+  document.querySelectorAll('[data-plan-register]').forEach(button => { button.hidden = signedIn; });
   document.querySelector('#admin-open').hidden = !user?.isAdmin;
   document.querySelector('#commissions-open').hidden = !user?.isAdmin;
   document.querySelector('#carrier-open').hidden = user?.role !== 'transportista';
@@ -553,7 +554,15 @@ document.querySelector("#empty-clear").addEventListener("click", clearFilters);
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
 
 
-document.querySelector('#register-carrier').addEventListener('click', () => { openAuth('register'); authForm.elements.namedItem('role').value = 'transportista'; updatePhoneField(); });
+function openRoleRegistration(role) {
+  openAuth('register');
+  authForm.elements.namedItem('role').value = role;
+  updatePhoneField();
+}
+document.querySelector('#register-carrier').addEventListener('click', () => openRoleRegistration('transportista'));
+document.querySelectorAll('[data-plan-register]').forEach(button => {
+  button.addEventListener('click', () => openRoleRegistration(button.dataset.planRegister));
+});
 document.querySelector('#gate-login').addEventListener('click', () => openAuth());
 document.querySelector('#account-login').addEventListener('click', () => openAuth());
 document.querySelector('#sign-in').addEventListener('click', () => openAuth('login', true));

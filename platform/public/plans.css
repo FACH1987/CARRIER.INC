@@ -1,0 +1,38 @@
+.plans-section {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: clamp(40px, 7vw, 88px) 0;
+  scroll-margin-top: 88px;
+}
+.plans-intro { max-width: 700px; }
+.plans-intro h2 {
+  color: var(--navy);
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: -.04em;
+  line-height: 1.12;
+  margin: 0 0 16px;
+}
+.plans-intro p { font-size: 16px; line-height: 1.55; margin: 0 0 12px; }
+.plans-intro .plans-note { color: #4b6080; font-size: 14px; }
+.plans-group { margin-top: 36px; }
+.plans-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.plans-heading h3 { color: var(--navy); font-size: 22px; margin: 0; }
+.plans-scroll { overflow-x: auto; border: 1px solid #d7e2f1; border-radius: 14px; background: #fff; }
+.plans-scroll:focus-visible { outline: 2px solid #2161d0; outline-offset: 3px; }
+.plans-table { width: 100%; min-width: 680px; table-layout: fixed; border-collapse: collapse; }
+.plans-table th, .plans-table td { padding: 13px 16px; text-align: left; vertical-align: top; font-size: 14px; line-height: 1.45; }
+.plans-table thead th { background: var(--navy); color: #fff; }
+.plans-table thead span { display: block; margin-top: 4px; color: #c8dcff; }
+.plans-table tbody th { color: var(--navy); background: #f4f7fd; }
+.plans-table tbody tr + tr { border-top: 1px solid #e3ebf7; }
+
+@media (max-width: 600px) {
+  .plans-section { width: calc(100% - 32px); scroll-margin-top: 128px; }
+}
