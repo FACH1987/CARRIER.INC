@@ -1,27 +1,26 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '../../../../../db';
-import { commissions, loads, users } from '../../../../../db/schema';
+import { loads, users } from '../../../../../db/schema';
 import { usesSupabase } from '../../../../../db/supabase';
 import { AuthError, authFailure, currentAccount, readAuthJson, responseJson } from '../../../../../lib/account-auth';
-import { COMMISSION_RATE_BPS, freightQuote } from '../../../../../lib/billing';
 import { carrierDossier, requireCarrierReady, todayNI } from '../../../../../lib/carrier-compliance';
 import { withAdminAccess } from '../../../../../lib/admin-policy';
 
 export const dynamic = 'force-dynamic';
 const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('options'), carrierEmail: z.string().trim().email().max(120).transform(value => value.toLowerCase()) }),
-  z.object({ action: z.literal('assign'), carrierEmail: z.string().trim().email().max(120).transform(value => value.toLowerCase()), vehicleId: z.string().uuid(), acceptCommission: z.literal(true) }),
+  z.object({ action: z.literal('assign'), carrierEmail: z.string().trim().email().max(120).transform(value => value.toLowerCase()), vehicleId: z.string().uuid() }),
   z.object({ action: z.enum(['accept', 'reject', 'cancel_assignment', 'deliver', 'complete']) })
 ]);
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const parsed = actionSchema.safeParse(await readAuthJson(request));
-    if (!parsed.success) throw new AuthError('Revisa la acción, el correo del transportista y la aceptación de la comisión.');
+    if (!parsed.success) throw new AuthError('Revisa la acción y los datos de la asignación.');
     const account = await currentAccount(request);
     if (!account) throw new AuthError('Inicia sesión para gestionar la carga.', 401);
     if (account.role === 'administrador') throw new AuthError('La cuenta de administrador no opera fletes.', 403);
-    if (usesSupabase()) throw new AuthError('El módulo de comisiones requiere la base D1 activa.', 503);
+    if (usesSupabase()) throw new AuthError('La gestión de cargas requiere la base D1 activa.', 503);
     const id = (await context.params).id;
     if (!z.string().uuid().safeParse(id).success) throw new AuthError('Carga no encontrada.', 404);
     const db = getDb();
@@ -43,26 +42,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       const vehicle = await requireCarrierReady(candidate.id, data.vehicleId, day);
       if (vehicle.equipment !== load.equipment || vehicle.capacityKg < load.weight) throw new AuthError('El vehículo no corresponde al equipo o capacidad de la carga.');
-      const quote = freightQuote(load.pay, load.feeAcceptedAt ? load.feeRateBps : COMMISSION_RATE_BPS);
-      const updated = await db.update(loads).set({ carrierId: candidate.id, transportVehicleId: vehicle.id, transportDriverId: vehicle.driverId, status: 'asignada', assignedAt: now, acceptedAt: null, deliveredAt: null, completedAt: null, feeRateBps: quote.rateBps, feeCents: quote.commissionCents, feeAcceptedAt: load.feeAcceptedAt || now })
+      const updated = await db.update(loads).set({ carrierId: candidate.id, transportVehicleId: vehicle.id, transportDriverId: vehicle.driverId, status: 'asignada', assignedAt: now, acceptedAt: null, deliveredAt: null, completedAt: null })
         .where(and(eq(loads.id, id), eq(loads.ownerId, load.ownerId), eq(loads.status, 'disponible'))).returning({ id: loads.id });
       if (!updated.length) throw new AuthError('La carga cambió. Actualiza el tablero.', 409);
-      return responseJson({ status: 'asignada', carrierName: candidate.name, quote });
+      return responseJson({ status: 'asignada', carrierName: candidate.name });
     }
     if (data.action === 'complete') {
       if (!owner) throw new AuthError('Solo quien publicó la carga puede confirmar la finalización.', 403);
-      const [existing] = await db.select({ id: commissions.id }).from(commissions).where(eq(commissions.loadId, id)).limit(1);
-      if (load.status === 'finalizada' && existing) return responseJson({ status: 'finalizada', commissionId: existing.id });
-      if (load.status !== 'entregada' || !load.carrierId || !load.feeAcceptedAt) throw new AuthError('El transportista debe confirmar la entrega antes de finalizar.', 409);
+      if (load.status === 'finalizada') return responseJson({ status: 'finalizada' });
+      if (load.status !== 'entregada' || !load.carrierId) throw new AuthError('El transportista debe reportar la entrega antes de finalizar.', 409);
       if (!load.deliveryEvidenceId) throw new AuthError('Se necesitan las dos fotos de la entrega antes de confirmar.', 409);
-      const quote = freightQuote(load.pay, load.feeRateBps);
-      if (quote.commissionCents !== load.feeCents || load.feeRateBps !== COMMISSION_RATE_BPS) throw new AuthError('La comisión acordada requiere revisión antes de finalizar.', 409);
-      await db.batch([
-        db.insert(commissions).values({ id: crypto.randomUUID(), loadId: id, payerId: account.id, carrierId: load.carrierId, fareCents: quote.fareCents, rateBps: load.feeRateBps, amountCents: load.feeCents, status: 'pending', createdAt: now }).onConflictDoNothing({ target: commissions.loadId }),
-        db.update(loads).set({ status: 'finalizada', completedAt: now }).where(and(eq(loads.id, id), eq(loads.status, 'entregada'), eq(loads.ownerId, load.ownerId)))
-      ]);
-      const [invoice] = await db.select({ id: commissions.id }).from(commissions).where(eq(commissions.loadId, id)).limit(1);
-      return responseJson({ status: 'finalizada', commissionId: invoice.id });
+      const updated = await db.update(loads).set({ status: 'finalizada', completedAt: sql`coalesce(${loads.completedAt}, ${now})` })
+        .where(and(eq(loads.id, id), eq(loads.ownerId, load.ownerId), inArray(loads.status, ['entregada', 'finalizada'])))
+        .returning({ id: loads.id });
+      if (!updated.length) throw new AuthError('La carga cambió. Actualiza el tablero.', 409);
+      return responseJson({ status: 'finalizada' });
     }
     if (data.action === 'deliver') throw new AuthError('Adjunta las dos fotos para reportar la entrega.', 409);
     if (data.action === 'cancel_assignment') {

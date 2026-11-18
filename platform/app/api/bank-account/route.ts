@@ -5,7 +5,7 @@ import { bankAccounts, loads, users } from '../../../db/schema';
 import { AuthError, authFailure, currentAccount, readAuthJson, requireSameOrigin, responseJson } from '../../../lib/account-auth';
 import { withAdminAccess } from '../../../lib/admin-policy';
 import { decryptBankNumber, encryptBankNumber } from '../../../lib/bank-account-security';
-import { freightQuote } from '../../../lib/billing';
+import { freightCents } from '../../../lib/billing';
 
 export const dynamic = 'force-dynamic';
 const text = z.string().trim().min(2).max(120);
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       const account = await currentAccount(request);
       if (!account) throw new AuthError('Inicia sesión para consultar los datos de pago.', 401);
       if (account.role !== 'empresa') throw new AuthError('Solo la empresa contratante puede consultar los datos de pago.', 403);
-      const [payment] = await getDb().select({ bank: bankAccounts, pay: loads.pay, rate: loads.feeRateBps, currency: loads.currency })
+      const [payment] = await getDb().select({ bank: bankAccounts, pay: loads.pay, currency: loads.currency })
         .from(loads).innerJoin(bankAccounts, eq(loads.carrierId, bankAccounts.userId))
         .where(and(eq(loads.id, directTransfer.data.loadId), eq(loads.ownerId, `account:${account.id}`),
           eq(loads.status, 'finalizada'), eq(bankAccounts.shareForDirectTransfer, true))).limit(1);
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       return responseJson({
         bankName: bank.bankName, holderName: bank.holderName, accountType: bank.accountType,
         accountNumber: decryptBankNumber(bank.encryptedNumber, bank.userId),
-        fareCents: freightQuote(payment.pay, payment.rate).fareCents, currency: payment.currency,
+        fareCents: freightCents(payment.pay), currency: payment.currency,
       });
     }
     const { userId, owner, readOnly } = await access(request);

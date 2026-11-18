@@ -275,17 +275,6 @@ transferDialog.addEventListener('close', () => {
 const assignForm = document.querySelector('#assign-form');
 let assigningId = null;
 const statusNames = { disponible: 'Disponible', asignada: 'Esperando aceptación', en_transito: 'En tránsito', entregada: 'Entrega reportada', finalizada: 'Finalizada' };
-function quoteText(quote, currency) {
-  return 'Flete al transportista: ' + formatCurrency(quote.fareCents / 100, currency) + ' · Comisión Carrier.INC 10%: ' + formatCurrency(quote.commissionCents / 100, currency) + ' · Total empresa: ' + formatCurrency(quote.totalCents / 100, currency);
-}
-function updatePostQuote() {
-  const pay = Number(postForm.elements.namedItem('pay').value);
-  if (!Number.isFinite(pay) || pay < 1 || pay > 1000000) { document.querySelector('#post-quote').textContent = 'Ingresa el valor del flete para ver la comisión.'; return; }
-  const fareCents = Math.round(pay * 100);
-  const commissionCents = Math.round(fareCents * 0.1);
-  document.querySelector('#post-quote').textContent = quoteText({ fareCents, commissionCents, totalCents: fareCents + commissionCents }, 'USD');
-}
-postForm.elements.namedItem('pay').addEventListener('input', updatePostQuote);
 function workflowControls(load) {
   const button = (action, title) => `<button class="workflow-button" type="button" data-workflow="${action}" data-load="${escapeHtml(load.id)}" ${workflowBusy.has(load.id) ? 'disabled' : ''}>${title}</button>`;
   let html = '';
@@ -307,13 +296,11 @@ function workflowSummary(load) {
   const status = escapeHtml(statusNames[load.status] || 'Disponible');
   const carrier = load.carrierName ? '<span>Transportista: ' + escapeHtml(load.carrierName) + '</span>' : '';
   const unit = load.vehiclePlate ? '<span>Unidad: ' + escapeHtml(load.vehiclePlate) + ' · Conductor: ' + escapeHtml(load.driverName || '') + ' · Categoría: ' + escapeHtml(load.licenseCategory || '') + '</span>' : '';
-  const pricing = load.quote ? '<span>' + escapeHtml(quoteText(load.quote, load.currency)) + (load.commissionAccepted ? '' : ' · Requiere aceptación al asignar') + '</span>' : '';
-  const invoice = load.commission ? '<strong>' + (load.commission.status === 'paid' ? 'Comisión registrada como pagada' : 'Comisión pendiente de pago por la empresa') + ': ' + escapeHtml(formatCurrency(load.commission.amountCents / 100, load.currency)) + '</strong>' : '';
   const evidenceUrl = '/api/loads/' + encodeURIComponent(load.id) + '/delivery-evidence?photo=';
   const evidence = load.hasDeliveryEvidence
     ? `<span><a href="${evidenceUrl}receipt" target="_blank" rel="noopener">Ver documento de recibido</a> · <a href="${evidenceUrl}cargo" target="_blank" rel="noopener">Ver foto de la carga</a></span>`
     : '';
-  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + pricing + evidence + invoice;
+  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + evidence;
 }
 async function workflowRequest(id, payload) {
   const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -369,16 +356,16 @@ loadList.addEventListener('click', async event => {
     assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Consulta primero el transportista</option>';
     document.querySelector('#assign-verified').textContent = '';
     document.querySelector('#assign-route').textContent = load.origin + ' → ' + load.destination;
-    document.querySelector('#assign-quote').textContent = quoteText(load.quote, load.currency);
+    document.querySelector('#assign-quote').textContent = 'Flete directo al transportista: ' + formatCurrency(load.pay, load.currency);
     document.querySelector('#assign-error').hidden = true;
     assignDialog.showModal();
     return;
   }
   const messages = {
-    accept: '¿Aceptar este viaje por el flete indicado? La comisión de Carrier.INC la paga la empresa, adicional al flete.',
-    reject: '¿Rechazar esta asignación? La carga volverá a estar disponible y no se generará comisión.',
-    cancel_assignment: '¿Retirar la asignación antes de que el transportista la acepte? No se generará comisión.',
-    complete: '¿Confirmas que el transporte finalizó? Se generará una comisión pendiente de pago de ' + formatCurrency((load.quote?.commissionCents || 0) / 100, load.currency) + ' a cargo de tu empresa. No se realiza un cargo automático.'
+    accept: '¿Aceptar este viaje por el flete indicado? La empresa te pagará directamente.',
+    reject: '¿Rechazar esta asignación? La carga volverá a estar disponible.',
+    cancel_assignment: '¿Retirar la asignación antes de que el transportista la acepte?',
+    complete: '¿Confirmas que la carga fue entregada? Podrás consultar los datos para transferir el flete directamente al transportista.'
   };
   if (!messages[action] || !window.confirm(messages[action])) return;
   workflowBusy.add(load.id);
@@ -387,7 +374,7 @@ loadList.addEventListener('click', async event => {
     await workflowRequest(load.id, { action });
     showMyLoads();
     await refreshLoads();
-    showToast(action === 'complete' ? 'Carga finalizada. Comisión pendiente de pago registrada.' : 'Estado de la carga actualizado.');
+    showToast(action === 'complete' ? 'Entrega confirmada. Ya puedes consultar los datos para transferir el flete.' : 'Estado de la carga actualizado.');
   } catch (error) { showToast(error.message || 'Revisa tu conexión.'); }
   finally { workflowBusy.delete(load.id); renderLoads(); }
 });
@@ -446,7 +433,7 @@ assignForm.addEventListener('submit', async event => {
   workflowBusy.add(id);
   document.querySelector('#assign-error').hidden = true;
   try {
-    await workflowRequest(id, { action: 'assign', carrierEmail: assignForm.elements.namedItem('carrierEmail').value.trim(), vehicleId: assignForm.elements.namedItem('vehicleId').value, acceptCommission: assignForm.elements.namedItem('acceptCommission').checked });
+    await workflowRequest(id, { action: 'assign', carrierEmail: assignForm.elements.namedItem('carrierEmail').value.trim(), vehicleId: assignForm.elements.namedItem('vehicleId').value });
     assignDialog.close();
     showMyLoads();
     await refreshLoads();
@@ -480,7 +467,6 @@ async function openPostDialog() {
   const localToday = ['year', 'month', 'day'].map(key => parts.find(part => part.type === key).value).join('-');
   dateInput.min = localToday;
   if (!dateInput.value || dateInput.value < localToday) dateInput.value = localToday;
-  updatePostQuote();
   if (!postDialog.open) postDialog.showModal();
 }
 
@@ -508,7 +494,6 @@ postForm.addEventListener("submit", async (event) => {
     currency: 'USD',
     company: String(formData.get("company")).trim(),
     email: String(formData.get("email")).trim(),
-    acceptCommission: postForm.elements.namedItem("acceptCommission").checked
   };
 
   const button = postForm.querySelector('[type="submit"]');

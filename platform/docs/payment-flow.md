@@ -1,6 +1,6 @@
 # Cobro anticipado y pago al transportista — diseño pendiente de proveedor
 
-Estado: propuesta local. No implementa cobros, transferencias ni cambios en la publicación de cargas. El sistema actual solo registra comisiones y referencias de pagos manuales.
+Estado: propuesta archivada. El flujo vigente es la transferencia directa del flete de la empresa al transportista, sin comisión de Carrier.INC. Las secciones siguientes documentan la propuesta anterior.
 
 Decisiones confirmadas: operación de la aplicación en Nicaragua; la empresa que publica confirma la entrega antes de liberar el pago. Falta identificar la cuenta de comercio y el proveedor contratado. Operar en Nicaragua no acredita por sí solo el país de registro legal del comercio.
 

@@ -1,10 +1,9 @@
 import { usesSupabase } from '../../../db/supabase';
 import { getDb } from '../../../db';
-import { commissions, loads, users, carrierVehicles, carrierDrivers } from '../../../db/schema';
+import { loads, users, carrierVehicles, carrierDrivers } from '../../../db/schema';
 import { and, desc, eq, gte, count, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { currentAccount } from '../../../lib/account-auth';
-import { COMMISSION_RATE_BPS, freightQuote } from '../../../lib/billing';
 import { carrierDossier, requireCarrierReady } from '../../../lib/carrier-compliance';
 import { AuthError } from '../../../lib/account-auth';
 import { equipmentTypes } from '../../../lib/equipment';
@@ -25,7 +24,6 @@ const schema = z.object({
   weight: z.number().finite().positive().max(100000),
   pay: z.number().finite().min(1).max(1000000).refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 0.000001),
   currency: z.literal('USD'),
-  acceptCommission: z.literal(true),
   company: text(80), email: z.string().trim().email().max(120)
 });
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Vary': 'Cookie' } });
@@ -42,16 +40,14 @@ export async function GET(request: Request) {
     const db = getDb();
     const data = await db.select({ load: loads, carrierName: users.name, carrierEmail: users.email, vehiclePlate: carrierVehicles.plate, driverName: carrierDrivers.name, licenseCategory: carrierVehicles.requiredCategory }).from(loads).leftJoin(users, eq(loads.carrierId, users.id)).leftJoin(carrierVehicles, eq(loads.transportVehicleId, carrierVehicles.id)).leftJoin(carrierDrivers, eq(loads.transportDriverId, carrierDrivers.id))
       .where(mine ? or(eq(loads.ownerId, owner), eq(loads.carrierId, user.id)) : and(gte(loads.pickupDate, dayInNicaragua()), eq(loads.status, 'disponible'))).orderBy(desc(loads.createdAt)).limit(500);
-    const invoices = mine ? await db.select({ loadId: commissions.loadId, status: commissions.status, amountCents: commissions.amountCents }).from(commissions).where(or(eq(commissions.payerId, user.id), eq(commissions.carrierId, user.id))) : [];
-    const invoiceMap = new Map(invoices.map(invoice => [invoice.loadId, invoice]));
     const visible = data.map(({ load, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
       const own = user.role !== 'administrador' && load.ownerId === owner;
       const assigned = user.role !== 'administrador' && load.carrierId === user.id;
-      const { ownerId, carrierId, deliveryEvidenceId, ...record } = load;
-      let quote = null;
-      try { quote = freightQuote(load.pay, load.feeAcceptedAt ? load.feeRateBps : COMMISSION_RATE_BPS); } catch { /* Legacy invalid fares remain visible and removable. */ }
-      return { ...record, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned, canDelete: own && load.status === 'disponible', canAssign: own && load.status === 'disponible' && Boolean(quote),
-        quote, hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId), commissionAccepted: Boolean(load.feeAcceptedAt), commission: invoiceMap.get(load.id) || null };
+      const { ownerId, carrierId, deliveryEvidenceId, feeRateBps, feeCents, feeAcceptedAt, ...record } = load;
+      const available = own && load.status === 'disponible';
+      return { ...record, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned,
+        canDelete: available, canAssign: available && schema.shape.pay.safeParse(load.pay).success,
+        hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId) };
     });
     return json({ loads: visible, signedIn: Boolean(user), user });
   } catch (error) {
@@ -70,7 +66,7 @@ export async function POST(request: Request) {
     try { await requireCarrierReady(user.id); }
     catch (error) { return json({ error: error instanceof AuthError ? error.message : 'No pudimos verificar tu expediente.', onboardingRequired: true }, error instanceof AuthError ? error.status : 503); }
   }
-  if (usesSupabase()) return json({ error: 'Las comisiones requieren la base D1 activa.' }, 503);
+  if (usesSupabase()) return json({ error: 'La publicación de cargas requiere la base D1 activa.' }, 503);
   const ownerId = `account:${user.id}`;
   if (request.headers.get('origin') !== new URL(request.url).origin) return json({ error: 'Origen de solicitud no válido.' }, 403);
   if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'Formato no válido.' }, 415);
@@ -80,16 +76,15 @@ export async function POST(request: Request) {
     if (new TextEncoder().encode(raw).length > 8192) return json({ error: 'La solicitud es demasiado grande.' }, 413);
     let parsed;
     try { parsed = schema.safeParse(JSON.parse(raw)); } catch { return json({ error: 'La solicitud no es válida.' }, 400); }
-    if (!parsed.success) return json({ error: 'Revisa los datos, indica el flete en USD y acepta la comisión del 10% a cargo de la empresa.' }, 400);
+    if (!parsed.success) return json({ error: 'Revisa los datos e indica el flete en USD.' }, 400);
     const since = new Date(Date.now() - 86400000).toISOString();
     const recentCount = (await getDb().select({ value: count() }).from(loads).where(and(eq(loads.ownerId, ownerId), gte(loads.createdAt, since))))[0].value;
     if (recentCount >= 10) return json({ error: 'Puedes publicar hasta 10 cargas en 24 horas. Intenta mañana.' }, 429);
-    const { acceptCommission, ...details } = parsed.data;
-    const quote = freightQuote(details.pay);
+    const details = parsed.data;
     const now = new Date().toISOString();
-    const load = { ...details, id: crypto.randomUUID(), createdAt: now, status: 'disponible' as const, feeRateBps: COMMISSION_RATE_BPS, feeCents: quote.commissionCents, feeAcceptedAt: now };
-    await getDb().insert(loads).values({ ...load, ownerId });
-    return json({ load: { ...load, canDelete: true, canAssign: true, isOwner: true, isCarrier: false, quote, commissionAccepted: true, commission: null } }, 201);
+    const load = { ...details, id: crypto.randomUUID(), createdAt: now, status: 'disponible' as const };
+    await getDb().insert(loads).values({ ...load, ownerId, feeRateBps: 0 });
+    return json({ load: { ...load, canDelete: true, canAssign: true, isOwner: true, isCarrier: false } }, 201);
   } catch (error) {
     console.error('No se pudo publicar la carga', error);
     return json({ error: 'No pudimos guardar la carga. Intenta de nuevo.' }, 503);
