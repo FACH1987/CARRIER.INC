@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="styles.css?v=live-operations-1">
     <link rel="stylesheet" href="plans.css">
     <script src="freight-map.js" defer></script>
-    <script src="app.js?v=live-operations-1" defer></script>
+    <script src="app.js?v=freight-chat-1" defer></script>
   <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
   <body>
     <header class="topbar">
@@ -27,7 +27,7 @@
         <a class="nav-link" href="#planes">Planes</a>
         <a class="nav-link" href="support.html">Soporte</a>
       </nav>
-      <div class="top-actions"><div id="document-notices" hidden></div><a id="bank-open" class="button button-light button-small" href="bank.html" hidden>Cuenta bancaria</a><a id="carrier-open" class="button button-light button-small" href="carrier.html" hidden>Mi expediente</a><a id="commissions-open" class="button button-light button-small" href="commissions.html" hidden>Historial de comisiones</a><a id="admin-open" class="button button-light button-small" href="admin.html" hidden>Usuarios</a><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
+      <div class="top-actions"><a id="load-chat-inbox" class="button button-light button-small" href="load-chat.html" hidden>Mis chats</a><div id="document-notices" hidden></div><a id="bank-open" class="button button-light button-small" href="bank.html" hidden>Cuenta bancaria</a><a id="carrier-open" class="button button-light button-small" href="carrier.html" hidden>Mi expediente</a><a id="commissions-open" class="button button-light button-small" href="commissions.html" hidden>Historial de comisiones</a><a id="admin-open" class="button button-light button-small" href="admin.html" hidden>Usuarios</a><span id="account-label" class="account-label" hidden></span><button id="account-login" class="button button-light button-small" type="button">Iniciar sesión</button><button id="account-logout" class="text-button" type="button" hidden>Cerrar sesión</button>
         <button class="button button-outline button-small" id="open-post-top" type="button">Publicar carga <span aria-hidden="true">↗</span></button>
       </div>
     </header>
@@ -37,7 +37,7 @@
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-dot"></span> GÜEGÜENSE DIGITAL · TRANSPORTE EN NICARAGUA</div>
           <h1>Tu próxima carga.<br>Tu ruta en <span class="text-highlight">Nicaragua.</span></h1>
-          <p>¿Necesitas transporte en Nicaragua? Publica tu carga. ¿Eres transportista? Encuentra envíos por origen, destino y equipo, y contacta a la empresa.</p>
+          <p>¿Necesitas transporte en Nicaragua? Publica tu carga. ¿Eres transportista? Encuentra envíos por origen, destino y equipo, y escribe a la empresa por el chat.</p>
           <div class="hero-actions">
             <a class="button button-dark" href="#tablero">Encontrar cargas <span aria-hidden="true">↓</span></a>
             <button class="button button-light" id="open-post-hero" type="button"><span class="plus-icon" aria-hidden="true">＋</span> Publicar una carga</button>
@@ -96,7 +96,7 @@
           <div class="board-meta" id="board-meta" hidden><span class="live-dot"></span><strong id="load-count">0</strong> <span id="load-count-label">cargas disponibles</span></div>
         </div>
 
-        <section id="document-notices-banner" class="document-notices-banner" role="status" hidden></section><div id="carrier-notice" class="empty-state" hidden><h3>Completa tu registro de transportista</h3><p>Sube los documentos del operador, conductor y vehículo. Deben estar completos y vigentes para consultar nuevas cargas y recibir viajes.</p><a class="button button-dark" href="carrier.html">Completar mi expediente</a></div><div id="access-gate" class="empty-state access-gate"><h3>Regístrate para ver las cargas</h3><p>¿Eres transportista? Crea tu cuenta para consultar rutas, pagos y contactos. Si ya tienes una cuenta, inicia sesión.</p><button class="button button-dark" id="register-carrier" type="button">Registrarme como transportista</button><button class="button button-light" id="gate-login" type="button">Ya tengo cuenta</button></div>
+        <section id="document-notices-banner" class="document-notices-banner" role="status" hidden></section><div id="carrier-notice" class="empty-state" hidden><h3>Completa tu registro de transportista</h3><p>Sube los documentos del operador, conductor y vehículo. Deben estar completos y vigentes para consultar nuevas cargas y recibir viajes.</p><a class="button button-dark" href="carrier.html">Completar mi expediente</a></div><div id="access-gate" class="empty-state access-gate"><h3>Regístrate para ver las cargas</h3><p>¿Eres transportista? Crea tu cuenta para consultar rutas y tarifas y comunicarte por chat. Si ya tienes una cuenta, inicia sesión.</p><button class="button button-dark" id="register-carrier" type="button">Registrarme como transportista</button><button class="button button-light" id="gate-login" type="button">Ya tengo cuenta</button></div>
         <div id="load-board" hidden>
         <form class="search-panel" id="search-form">
           <label class="search-field">
@@ -153,7 +153,7 @@
         <header class="plans-intro">
           <h2 id="plans-title">Planes para empresas y transportistas</h2>
           <p>Publica tu primera carga o encuentra tu próximo viaje gratis. La empresa paga el flete directamente al transportista, sin comisión por viaje.</p>
-          <p class="plans-note">El tablero muestra cargas con mapa de recogida y avisos cercanos optativos. Corporativo incluye GPS durante el viaje y captura de firma. El chat de soporte está disponible por plan. Los equipos de empresa, el número de WhatsApp y la asignación de ejecutivo siguen pendientes de configurar.</p>
+          <p class="plans-note">El tablero muestra cargas con mapa de recogida y avisos cercanos optativos. Corporativo incluye GPS durante el viaje y captura de firma. El chat de soporte está disponible por plan. Los equipos de empresa y la asignación de ejecutivo siguen pendientes.</p>
           <a class="button button-light" href="subscriptions.html">Gestionar suscripción</a>
         </header>
         <section class="plans-group" aria-labelledby="plans-empresa">
@@ -170,7 +170,7 @@
                 <tr><th scope="row">Visibilidad de la carga</th><td>Estándar</td><td>Destacada, con aviso rápido a conductores cercanos</td><td>Urgente o VIP, con alerta sonora en un radio de 5 km</td></tr>
                 <tr><th scope="row">Usuarios y sucursales</th><td>1 usuario</td><td>Hasta 3 usuarios</td><td>Usuarios y sucursales ilimitados</td></tr>
                 <tr><th scope="row">Control y comprobantes</th><td>Historial básico de viajes</td><td>Reportes de gastos en Excel y PDF</td><td>Rastreo GPS en vivo y comprobante digital con foto y firma</td></tr>
-                <tr><th scope="row">Soporte</th><td>Chat en la app</td><td>WhatsApp prioritario</td><td>Ejecutivo de cuenta dedicado</td></tr>
+                <tr><th scope="row">Soporte</th><td>Chat en la app</td><td>Chat prioritario</td><td>Ejecutivo de cuenta dedicado</td></tr>
               </tbody>
             </table>
           </div>
@@ -219,14 +219,13 @@
           <label class="form-field"><span>Latitud del punto de recogida</span><input name="pickupLatitude" type="number" min="-90" max="90" step="any"></label>
           <label class="form-field"><span>Longitud del punto de recogida</span><input name="pickupLongitude" type="number" min="-180" max="180" step="any"></label>
           <div><button type="button" class="button button-light" id="pickup-location">Usar mi ubicación para la recogida</button><p id="pickup-location-status" role="status">Agrega coordenadas para mostrar el mapa y avisar a conductores cercanos. Serán visibles en el tablero para usuarios registrados.</p></div>
-          <label class="form-field"><span>Correo de contacto</span><input name="email" type="email" required maxlength="120" placeholder="Tu correo de contacto"></label>
         </div>
-        <p class="form-note"><span aria-hidden="true">ⓘ</span> Tu carga y correo de contacto serán visibles para usuarios registrados. Para publicar necesitas una cuenta de Carrier.INC. El contacto abre la aplicación de correo.</p>
-        <label class="form-note"><input name="consent" type="checkbox" required> Acepto compartir estos datos y mi correo con usuarios registrados para recibir consultas sobre esta carga.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
+        <p class="form-note"><span aria-hidden="true">ⓘ</span> Los detalles de tu carga serán visibles para usuarios registrados. Las consultas se reciben en el chat de la app.</p>
+        <label class="form-note"><input name="consent" type="checkbox" required> Acepto compartir los detalles de esta carga con usuarios registrados para recibir consultas por chat.</label><p id="publish-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-light" id="cancel-dialog" type="button">Cancelar</button><button class="button button-dark" type="submit">Publicar carga <span aria-hidden="true">→</span></button></div>
       </form>
     </dialog>
 
-    <dialog class="post-dialog account-dialog" id="assign-dialog" aria-labelledby="assign-title"><form id="assign-form" class="post-form"><div class="dialog-heading"><div><h2 id="assign-title">Asignar transportista</h2><p id="assign-route"></p></div><button class="close-button" id="assign-close" type="button" aria-label="Cerrar asignación">×</button></div><label class="form-field"><span>Correo del transportista registrado</span><input name="carrierEmail" type="email" maxlength="120" required autocomplete="off"></label><p class="account-help">Solo se muestran unidades con documentos cargados y vigentes hasta la fecha de recogida, equipo compatible y capacidad suficiente.</p><button type="button" id="assign-lookup" class="button button-light">Consultar unidades disponibles</button><label class="form-field"><span>Unidad y conductor con expediente completo</span><select name="vehicleId" required><option value="">Consulta primero el transportista</option></select></label><p id="assign-verified" class="account-help"></p><div id="assign-quote" class="freight-quote"></div><p id="assign-error" class="account-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-dark" type="submit">Asignar transportista</button></div></form></dialog>
+    <dialog class="post-dialog account-dialog" id="assign-dialog" aria-labelledby="assign-title"><form id="assign-form" class="post-form"><div class="dialog-heading"><div><h2 id="assign-title">Asignar transportista</h2><p id="assign-route"></p></div><button class="close-button" id="assign-close" type="button" aria-label="Cerrar asignación">×</button></div><label class="form-field"><span>Transportista de esta carga</span><select name="carrierId" required><option value="">Selecciona un transportista</option></select></label><p class="account-help">Solo se muestran unidades con documentos cargados y vigentes hasta la fecha de recogida, equipo compatible y capacidad suficiente.</p><button type="button" id="assign-lookup" class="button button-light">Consultar unidades disponibles</button><label class="form-field"><span>Unidad y conductor con expediente completo</span><select name="vehicleId" required><option value="">Consulta primero el transportista</option></select></label><p id="assign-verified" class="account-help"></p><div id="assign-quote" class="freight-quote"></div><p id="assign-error" class="account-error" role="alert" hidden></p><div class="dialog-actions"><button class="button button-dark" type="submit">Asignar transportista</button></div></form></dialog>
     <dialog class="post-dialog account-dialog" id="auth-dialog" aria-labelledby="auth-title">
       <form class="post-form" id="auth-form">
         <div class="dialog-heading"><div><div class="eyebrow">TU CUENTA DE Carrier.INC</div><h2 id="auth-title">Iniciar sesión</h2><p id="auth-description">Ingresa tu correo y contraseña para continuar.</p></div><button class="close-button" id="auth-close" type="button" aria-label="Cerrar acceso a cuenta">×</button></div>

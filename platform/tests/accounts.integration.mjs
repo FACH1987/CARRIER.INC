@@ -140,6 +140,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert(!('ownerId' in listing.loads.find(row => row.id === load.id)));
       assert.equal(listing.loads.find(row => row.id === load.id).canDelete, true);
       assert.equal(listing.loads.find(row => row.id === load.id).corporate, true);
+      assert(!('email' in listing.loads.find(row => row.id === load.id)));
       assert.equal((await api('/api/loads', { method: 'POST', cookie, body: cargo, headers: { Origin: 'https://other.example' } })).status, 403);
     });
     await t.test('only the owner can delete cargo, including expired own cargo', async () => {
@@ -469,7 +470,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       const quotes = await (await api(quotesPath, { cookie })).json();
       assert.equal(quotes.quotes[0].priority, 2);
       const newCargoNotices = await (await api('/api/carrier/notifications', { cookie: carrierSession })).json();
-      assert(newCargoNotices.loadAlerts.some(alert => alert.loadId === financialLoad.id && alert.load.email === email && alert.load.pay === 100.05));
+      assert(newCargoNotices.loadAlerts.some(alert => alert.loadId === financialLoad.id && !('email' in alert.load) && alert.load.pay === 100.05));
       const cargoNotice = newCargoNotices.loadAlerts.find(alert => alert.loadId === financialLoad.id);
       assert(!('ownerId' in cargoNotice.load));
       assert.equal((await api('/api/carrier/notifications', { method: 'POST', cookie: carrierSession, body: { ids: [cargoNotice.id] } })).status, 200);
@@ -478,7 +479,20 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert(!('commission' in financialLoad));
       const workflow = '/api/loads/' + financialLoad.id + '/workflow';
       const act = (action, session = cookie, extra = {}) => api(workflow, { method: 'POST', cookie: session, body: { action, ...(action === 'assign' ? { vehicleId } : {}), ...extra } });
-      const options = await act('options', cookie, { carrierEmail: carrierAccount.email });
+      const chatPath = '/api/loads/' + financialLoad.id + '/chat';
+      const messageCarrier = body => api(chatPath, { method: 'POST', cookie: carrierSession, body: { body } });
+      assert.equal((await messageCarrier('Mi número es +505 8888-0000')).status, 400);
+      assert.equal((await messageCarrier('Escríbeme a prueba@example.com')).status, 400);
+      assert.equal((await messageCarrier('Puedo recoger la carga a las 08:30.')).status, 201);
+      const chatOwner = await (await api(chatPath, { cookie })).json();
+      assert(chatOwner.participants.some(participant => participant.id === carrierAccount.id && !('email' in participant)));
+      assert.equal((await api(chatPath, { method: 'POST', cookie,
+        body: { carrierId: carrierAccount.id, body: 'Te esperamos en la entrada principal.' } })).status, 201);
+      const carrierChat = await (await api(chatPath, { cookie: carrierSession })).json();
+      assert.deepEqual(carrierChat.messages.map(message => message.fromCarrier).sort(), [false, true]);
+      assert.equal((await api(chatPath, { cookie: adminCookie })).status, 404);
+      assert((await (await api('/api/load-chats', { cookie })).json()).threads.some(thread => thread.loadId === financialLoad.id));
+      const options = await act('options', cookie, { carrierId: carrierAccount.id });
       assert.equal(options.status, 200);
       assert.deepEqual((await options.json()).vehicles.map(v => v.id), [vehicleId]);
       await db.prepare('update carrier_documents set expires_at = ? where id = ?').bind(afterDays(2), newLicense.id).run();

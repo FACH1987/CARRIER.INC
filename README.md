@@ -5,7 +5,7 @@ La aplicación de producción está en `platform/`. Usa una API y Cloudflare D1 
 - Consulta de cargas vigentes solo con sesión iniciada, filtros y actualización cada 30 segundos.
 - Cuentas propias con correo y contraseña para publicar.
 - Datos validados en el servidor y consultas parametrizadas.
-- El correo del anunciante solo es visible para usuarios con sesión iniciada, con consentimiento al publicar.
+- La empresa y el transportista coordinan por el chat privado de cada carga.
 - Hasta 10 publicaciones por usuario cada 24 horas.
 - No se incluyen cargas ni valores de demostración.
 

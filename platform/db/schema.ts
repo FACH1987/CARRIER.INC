@@ -132,6 +132,14 @@ export const loadPositions = sqliteTable('load_positions', {
   latitude: real('latitude').notNull(), longitude: real('longitude').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+export const loadMessages = sqliteTable('load_messages', {
+  id: text('id').primaryKey(),
+  loadId: text('load_id').notNull().references(() => loads.id, { onDelete: 'cascade' }),
+  carrierId: text('carrier_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  fromCarrier: integer('from_carrier', { mode: 'boolean' }).notNull(),
+  body: text('body').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (t) => [index('load_messages_thread_date').on(t.loadId, t.carrierId, t.createdAt)]);
 export const supportMessages = sqliteTable('support_messages', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),

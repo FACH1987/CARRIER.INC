@@ -279,6 +279,18 @@ CREATE INDEX "support_messages_user_date" ON public."support_messages" ("user_id
 ALTER TABLE public."support_messages" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public."support_messages" FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public."support_messages" TO service_role;
+CREATE TABLE public."load_messages" (
+  "id" text PRIMARY KEY NOT NULL,
+  "load_id" text NOT NULL,
+  "carrier_id" text NOT NULL,
+  "from_carrier" bigint NOT NULL,
+  "body" text NOT NULL,
+  "created_at" text NOT NULL
+);
+CREATE INDEX "load_messages_thread_date" ON public."load_messages" ("load_id", "carrier_id", "created_at");
+ALTER TABLE public."load_messages" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public."load_messages" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."load_messages" TO service_role;
 ALTER TABLE public."bank_accounts" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."sessions" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."carrier_profiles" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
@@ -305,4 +317,6 @@ ALTER TABLE public."carrier_ratings" ADD FOREIGN KEY ("carrier_id") REFERENCES p
 ALTER TABLE public."carrier_ratings" ADD FOREIGN KEY ("load_id") REFERENCES public."loads" ("id") ON DELETE NO ACTION;
 ALTER TABLE public."load_positions" ADD FOREIGN KEY ("load_id") REFERENCES public."loads" ("id") ON DELETE CASCADE;
 ALTER TABLE public."support_messages" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
+ALTER TABLE public."load_messages" ADD FOREIGN KEY ("carrier_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
+ALTER TABLE public."load_messages" ADD FOREIGN KEY ("load_id") REFERENCES public."loads" ("id") ON DELETE CASCADE;
 COMMIT;

@@ -6,6 +6,7 @@ import { AuthError, authFailure, currentAccount, readAuthJson, responseJson } fr
 import { carrierDossier, todayNI } from '../../../../../lib/carrier-compliance';
 import { activePlan, nicaraguaMonthStart } from '../../../../../lib/subscriptions';
 import { customerTypeFor } from '../../../../../lib/load-access';
+import { chatPublicName } from '../../../../../lib/load-chat';
 
 export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ id: string }> };
@@ -28,10 +29,10 @@ export async function GET(request: Request, context: Context) {
     if (load.ownerId !== `account:${account.id}`) throw new AuthError('Solo quien publicó la carga puede ver las cotizaciones.', 403);
     const rating = sql<number | null>`(SELECT avg(score) FROM carrier_ratings WHERE carrier_id = ${loadQuotes.carrierId})`;
     const quotes = await getDb().select({
-      name: users.name, email: users.email, amountCents: loadQuotes.amountCents, priority: loadQuotes.priority, rating,
+      name: users.name, carrierId: users.id, amountCents: loadQuotes.amountCents, priority: loadQuotes.priority, rating,
     }).from(loadQuotes).innerJoin(users, eq(users.id, loadQuotes.carrierId))
       .where(eq(loadQuotes.loadId, load.id)).orderBy(desc(loadQuotes.priority), desc(rating), asc(loadQuotes.createdAt)).limit(100);
-    return responseJson({ quotes, currency: load.currency });
+    return responseJson({ quotes: quotes.map(quote => ({ ...quote, name: chatPublicName(quote.name, 'Transportista') })), currency: load.currency });
   } catch (error) { return authFailure(error); }
 }
 

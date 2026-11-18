@@ -1,4 +1,4 @@
-﻿# Carrier.INC Nicaragua
+# Carrier.INC Nicaragua
 
 Aplicación web con API de cargas compartidas y Cloudflare D1.
 
@@ -14,7 +14,7 @@ La publicación puede incluir coordenadas de recogida para mostrarlas en el mapa
 
 Las cargas publicadas con Corporativo incluyen el GPS y la firma del receptor. El GPS requiere que el transportista asignado autorice y mantenga abierta la página del viaje. Se conserva la última posición, visible para las partes del viaje, y se retira al detener el envío o reportar la entrega. El mapa usa OpenStreetMap cuando se abre. La firma se adjunta al expediente privado con el nombre y la autorización del receptor.
 
-El administrador responde desde **Soporte**. Negocio tiene prioridad en la bandeja y Corporativo tiene el nivel más alto. Configurar `SUPPORT_WHATSAPP` con el número comercial en formato internacional sin el signo + y `SUPPORT_EXECUTIVE` con el nombre del ejecutivo designado de Corporativo.
+El administrador responde desde **Soporte**. Negocio tiene prioridad en la bandeja y Corporativo tiene el nivel más alto. Configurar `SUPPORT_EXECUTIVE` con el nombre del ejecutivo designado de Corporativo. La atención se realiza en el chat de la app.
 
 ## Desarrollo
 
@@ -26,7 +26,7 @@ El administrador responde desde **Soporte**. Negocio tiene prioridad en la bande
 
 El hosting Sites aplica las migraciones de producción durante el despliegue. Las bases de datos local y de producción son independientes.
 
-Las cargas solo pueden consultarse con una cuenta de empresa o transportista y una sesión iniciada. Publicarlas requiere una cuenta de Carrier.INC con correo y contraseña. Los datos de contacto se comparten con usuarios registrados, con consentimiento. No se importan los datos del almacenamiento local del prototipo.
+Las cargas solo pueden consultarse con una cuenta de empresa o transportista y una sesión iniciada. Publicarlas requiere una cuenta de Carrier.INC con correo y contraseña. Las consultas, cotizaciones y asignaciones se coordinan en **Mis chats**. Las publicaciones y cotizaciones omiten el correo y teléfono de las partes. No se importan los datos del almacenamiento local del prototipo.
 
 Web: [Carrier.INC Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
 

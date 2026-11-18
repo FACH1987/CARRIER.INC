@@ -59,6 +59,7 @@ function setAccount(user) {
   const changed = currentUser?.id !== user?.id || currentUser?.role !== user?.role;
   currentUser = user;
   signedIn = Boolean(user);
+  document.querySelector('#load-chat-inbox').hidden = !user || user.isAdmin;
   nearbyButton.hidden = user?.role !== 'transportista';
   if (user?.role !== 'transportista') stopNearbyAlerts();
   document.querySelectorAll('[data-plan-register]').forEach(button => { button.hidden = signedIn; });
@@ -231,8 +232,10 @@ function renderLoads() {
   emptyState.hidden = visibleLoads.length > 0;
   loadList.hidden = visibleLoads.length === 0;
   loadList.innerHTML = visibleLoads.map((load) => {
-    const contactEmail = load.isOwner && load.carrierEmail ? load.carrierEmail : load.email;
-    const contactControl = `<a class="button contact-button" href="mailto:${escapeHtml(contactEmail)}?subject=${encodeURIComponent(`Consulta sobre carga: ${load.origin} a ${load.destination}`)}" aria-label="Contactar a ${escapeHtml(load.company)} por correo">Contactar <span aria-hidden="true">↗</span></a>`;
+    const canChat = load.isOwner || load.isCarrier || (currentUser?.role === 'transportista' && load.status === 'disponible');
+    const contactControl = canChat
+      ? `<a class="button contact-button" href="load-chat.html?load=${encodeURIComponent(load.id)}">Abrir chat</a>`
+      : '';
     const quoteControl = currentUser?.role === 'transportista' && !load.isOwner && load.status === 'disponible'
       ? `<button type="button" class="button button-light button-small" data-quote-load="${escapeHtml(load.id)}">Cotizar</button>`
       : '';
@@ -341,7 +344,11 @@ loadList.addEventListener('click', async event => {
         const row = document.createElement('li');
         const gold = quote.priority === 2 ? ' · Verificado Oro' : '';
         const score = quote.rating != null ? ' · ' + quote.rating.toFixed(1) + '/5' : '';
-        row.textContent = quote.name + ' · ' + quote.email + ' · ' + formatCurrency(quote.amountCents / 100, result.currency) + gold + score;
+        row.textContent = quote.name + ' · ' + formatCurrency(quote.amountCents / 100, result.currency) + gold + score + ' · ';
+        const chat = document.createElement('a');
+        chat.textContent = 'Abrir chat';
+        chat.href = 'load-chat.html?' + new URLSearchParams({ load: listButton.dataset.quoteList, carrier: quote.carrierId });
+        row.append(chat);
         list.append(row);
       }
       if (!result.quotes.length) {
@@ -548,12 +555,28 @@ loadList.addEventListener('click', async event => {
     if (!load.canAssign) return;
     assigningId = load.id;
     assignForm.reset();
+    const picker = assignForm.elements.namedItem('carrierId');
+    picker.replaceChildren(new Option('Cargando transportistas…', ''));
     assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Consulta primero el transportista</option>';
     document.querySelector('#assign-verified').textContent = '';
     document.querySelector('#assign-route').textContent = load.origin + ' → ' + load.destination;
     document.querySelector('#assign-quote').textContent = 'Flete directo al transportista: ' + formatCurrency(load.pay, load.currency);
     document.querySelector('#assign-error').hidden = true;
     assignDialog.showModal();
+    try {
+      const response = await fetch('/api/loads/' + encodeURIComponent(load.id) + '/chat');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      if (assigningId !== load.id) return;
+      picker.replaceChildren(new Option(data.participants.length ? 'Selecciona un transportista' : 'Todavía no hay chats ni cotizaciones', ''),
+        ...data.participants.map(carrier => new Option(carrier.name, carrier.id)));
+    } catch (error) {
+      if (assigningId !== load.id) return;
+      picker.replaceChildren(new Option('No pudimos cargar los transportistas', ''));
+      const target = document.querySelector('#assign-error');
+      target.textContent = error.message;
+      target.hidden = false;
+    }
     return;
   }
   const messages = {
@@ -666,20 +689,20 @@ ratingForm.addEventListener('submit', async event => {
   }
 });
 assignDialog.addEventListener('cancel', event => { if (workflowBusy.has(assigningId)) event.preventDefault(); });
-assignForm.elements.namedItem('carrierEmail').addEventListener('input', () => {
-  assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Vuelve a consultar este correo</option>';
+assignForm.elements.namedItem('carrierId').addEventListener('change', () => {
+  assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Consulta las unidades de este transportista</option>';
   document.querySelector('#assign-verified').textContent = '';
 });
 document.querySelector('#assign-lookup').addEventListener('click', async event => {
   if (!assigningId || workflowBusy.has(assigningId)) return;
-  const email = assignForm.elements.namedItem('carrierEmail');
-  if (!email.reportValidity()) return;
+  const picker = assignForm.elements.namedItem('carrierId');
+  if (!picker.reportValidity()) return;
   const button = event.currentTarget; button.disabled = true;
   workflowBusy.add(assigningId);
-  const requestedEmail = email.value.trim();
+  const carrierId = picker.value;
   try {
-    const result = await workflowRequest(assigningId, { action: 'options', carrierEmail: requestedEmail });
-    if (requestedEmail !== email.value.trim()) return;
+    const result = await workflowRequest(assigningId, { action: 'options', carrierId });
+    if (carrierId !== picker.value) return;
     assignForm.elements.namedItem('vehicleId').innerHTML = '<option value="">Selecciona una unidad</option>' + result.vehicles.map(v => `<option value="${escapeHtml(v.id)}">${escapeHtml(v.plate)} · ${escapeHtml(v.driverName)} · Categoría ${escapeHtml(v.category)}</option>`).join('');
     document.querySelector('#assign-verified').textContent = result.vehicles.length ? 'Documentación completa y con fechas vigentes hasta la recogida: ' + result.checkedThrough + '. Fechas y categorías declaradas por el transportista.' : 'No tiene unidades habilitadas para esta fecha, equipo y capacidad. El transportista debe completar o renovar su expediente.';
   } catch (error) { document.querySelector('#assign-error').textContent = error.message; document.querySelector('#assign-error').hidden = false; }
@@ -694,7 +717,7 @@ assignForm.addEventListener('submit', async event => {
   workflowBusy.add(id);
   document.querySelector('#assign-error').hidden = true;
   try {
-    await workflowRequest(id, { action: 'assign', carrierEmail: assignForm.elements.namedItem('carrierEmail').value.trim(), vehicleId: assignForm.elements.namedItem('vehicleId').value });
+    await workflowRequest(id, { action: 'assign', carrierId: assignForm.elements.namedItem('carrierId').value, vehicleId: assignForm.elements.namedItem('vehicleId').value });
     assignDialog.close();
     showMyLoads();
     await refreshLoads();
@@ -721,7 +744,6 @@ async function openPostDialog() {
   document.querySelector('#publish-error').hidden = true;
   if (currentUser) {
     if (!postForm.elements.namedItem('company').value) postForm.elements.namedItem('company').value = currentUser.name;
-    if (!postForm.elements.namedItem('email').value) postForm.elements.namedItem('email').value = currentUser.email;
   }
   const visibility = postForm.elements.namedItem('visibility');
   visibility.querySelector('[value="destacada"]').disabled = !['negocio', 'corporativo'].includes(viewerPlan);
@@ -779,7 +801,6 @@ postForm.addEventListener("submit", async (event) => {
     customerType: String(formData.get("customerType")),
     visibility: String(formData.get("visibility")),
     ...(latitude && longitude ? { pickupLocation: { latitude: Number(latitude), longitude: Number(longitude) } } : {}),
-    email: String(formData.get("email")).trim(),
   };
 
   const button = postForm.querySelector('[type="submit"]');

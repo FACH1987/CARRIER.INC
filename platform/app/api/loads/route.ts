@@ -10,6 +10,7 @@ import { AuthError } from '../../../lib/account-auth';
 import { equipmentTypes } from '../../../lib/equipment';
 import { activePlan, nicaraguaMonthStart } from '../../../lib/subscriptions';
 import { customerTypeFor, customerTypes, loadVisibilities } from '../../../lib/load-access';
+import { chatPublicName, containsExternalContact } from '../../../lib/load-chat';
 
 export const dynamic = 'force-dynamic';
 const dayInNicaragua = () => {
@@ -27,7 +28,7 @@ const schema = z.object({
   weight: z.number().finite().positive().max(100000),
   pay: z.number().finite().min(1).max(1000000).refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 0.000001),
   currency: z.literal('USD'),
-  company: text(80), email: z.string().trim().email().max(120),
+  company: text(80),
   customerType: z.enum(customerTypes).optional(),
   visibility: z.enum(loadVisibilities).default('estandar'),
   pickupLocation: z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).optional(),
@@ -45,16 +46,19 @@ export async function GET(request: Request) {
     const owner = `account:${user.id}`;
     const db = getDb();
     const publisher = alias(users, 'publisher');
-    const data = await db.select({ load: loads, rating: carrierRatings.score, publisherRole: publisher.role, carrierName: users.name, carrierEmail: users.email, vehiclePlate: carrierVehicles.plate, driverName: carrierDrivers.name, licenseCategory: carrierVehicles.requiredCategory }).from(loads).leftJoin(users, eq(loads.carrierId, users.id)).leftJoin(publisher, eq(publisher.id, sql<string>`substr(${loads.ownerId}, 9)`)).leftJoin(carrierVehicles, eq(loads.transportVehicleId, carrierVehicles.id)).leftJoin(carrierDrivers, eq(loads.transportDriverId, carrierDrivers.id)).leftJoin(carrierRatings, eq(loads.id, carrierRatings.loadId))
+    const data = await db.select({ load: loads, rating: carrierRatings.score, publisherRole: publisher.role, carrierName: users.name, vehiclePlate: carrierVehicles.plate, driverName: carrierDrivers.name, licenseCategory: carrierVehicles.requiredCategory }).from(loads).leftJoin(users, eq(loads.carrierId, users.id)).leftJoin(publisher, eq(publisher.id, sql<string>`substr(${loads.ownerId}, 9)`)).leftJoin(carrierVehicles, eq(loads.transportVehicleId, carrierVehicles.id)).leftJoin(carrierDrivers, eq(loads.transportDriverId, carrierDrivers.id)).leftJoin(carrierRatings, eq(loads.id, carrierRatings.loadId))
       .where(mine ? or(eq(loads.ownerId, owner), eq(loads.carrierId, user.id)) : and(gte(loads.pickupDate, dayInNicaragua()), eq(loads.status, 'disponible')))
       .orderBy(...(mine ? [] : [sql`CASE ${loads.visibility} WHEN 'vip' THEN 0 WHEN 'destacada' THEN 1 ELSE 2 END`]), desc(loads.createdAt)).limit(500);
-    const visible = data.map(({ load, rating, publisherRole, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
+    const visible = data.map(({ load, rating, publisherRole, carrierName, vehiclePlate, driverName, licenseCategory }) => {
       const own = user.role !== 'administrador' && load.ownerId === owner;
       const assigned = user.role !== 'administrador' && load.carrierId === user.id;
-      const { ownerId, carrierId, deliveryEvidenceId, deliverySigner, feeRateBps, feeCents, feeAcceptedAt, ...record } = load;
+      const { ownerId, carrierId, email, deliveryEvidenceId, deliverySigner, feeRateBps, feeCents, feeAcceptedAt, ...record } = load;
       const available = own && load.status === 'disponible';
       const customerType = customerTypeFor(load.customerType, publisherRole);
-      return { ...record, customerType, corporate: customerType === 'empresa', carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned,
+      return { ...record, company: chatPublicName(record.company, 'Publicador'), origin: chatPublicName(record.origin, 'Origen'),
+        destination: chatPublicName(record.destination, 'Destino'), customerType, corporate: customerType === 'empresa',
+        carrierName: carrierName ? chatPublicName(carrierName, 'Transportista') : null, vehiclePlate,
+        driverName: driverName ? chatPublicName(driverName, 'Conductor') : null, licenseCategory, isOwner: own, isCarrier: assigned,
         rating: own ? rating : null,
         canDelete: available, canAssign: available && schema.shape.pay.safeParse(load.pay).success,
         hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId), deliverySigner: own || assigned ? deliverySigner : null };
@@ -87,6 +91,8 @@ export async function POST(request: Request) {
     let parsed;
     try { parsed = schema.safeParse(JSON.parse(raw)); } catch { return json({ error: 'La solicitud no es válida.' }, 400); }
     if (!parsed.success) return json({ error: 'Revisa los datos e indica el flete en USD.' }, 400);
+    if ([parsed.data.company, parsed.data.origin, parsed.data.destination].some(containsExternalContact))
+      return json({ error: 'Quita el teléfono, correo o enlace de contacto. La coordinación se realiza por el chat.' }, 400);
     const { pickupLocation, ...details } = parsed.data;
     const now = new Date().toISOString();
     const plan = await activePlan(user.id, now);
@@ -102,7 +108,7 @@ export async function POST(request: Request) {
     const [published] = await getDb().all<{ id: string }>(sql`
       INSERT INTO loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, currency, company, email, created_at, status, fee_rate_bps, customer_type, visibility, corporate_extras, pickup_latitude, pickup_longitude)
       SELECT ${load.id}, ${ownerId}, ${load.origin}, ${load.destination}, ${load.pickupDate}, ${load.equipment},
-        ${load.weight}, ${load.pay}, ${load.currency}, ${load.company}, ${load.email}, ${now}, 'disponible', 0, ${load.customerType}, ${load.visibility}, ${load.corporateExtras ? 1 : 0}, ${load.pickupLatitude}, ${load.pickupLongitude}
+        ${load.weight}, ${load.pay}, ${load.currency}, ${load.company}, ${user.email}, ${now}, 'disponible', 0, ${load.customerType}, ${load.visibility}, ${load.corporateExtras ? 1 : 0}, ${load.pickupLatitude}, ${load.pickupLongitude}
       WHERE ${limit === null ? sql`1` : sql`(SELECT count(*) FROM load_publications WHERE owner_id = ${ownerId} AND created_at >= ${since}) < ${limit}`}
       RETURNING id
     `);

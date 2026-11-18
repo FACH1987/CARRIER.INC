@@ -32,14 +32,6 @@ async function refreshSupport() {
     if (data.admin) addSupportElement('a', 'Volver a la bandeja').href = 'support.html';
     if (data.plan === 'negocio') addSupportElement('p', 'Soporte prioritario de Negocio.');
     if (data.plan === 'corporativo') addSupportElement('p', data.executive ? 'Tu ejecutivo de cuenta: ' + data.executive : 'Atención Corporativo. Ejecutivo pendiente de asignar.');
-    if (data.whatsapp) {
-      const link = addSupportElement('a', 'Abrir WhatsApp de soporte');
-      link.href = 'https://wa.me/' + data.whatsapp;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-    } else if (data.plan === 'negocio') {
-      addSupportElement('p', 'El canal WhatsApp está pendiente de configurar. Puedes escribir por el chat prioritario.');
-    }
     if (!data.messages.length) addSupportElement('p', 'Escribe tu consulta para iniciar la conversación.');
     const list = addSupportElement('ol', '');
     for (const message of data.messages) {

@@ -8,7 +8,7 @@ import { activePlan } from '../../../lib/subscriptions';
 
 export const dynamic = 'force-dynamic';
 const messageSchema = z.object({ body: z.string().trim().min(2).max(800), userId: z.string().uuid().optional() });
-const config = env as unknown as { SUPPORT_WHATSAPP?: string; SUPPORT_EXECUTIVE?: string };
+const config = env as unknown as { SUPPORT_EXECUTIVE?: string };
 
 export async function GET(request: Request) {
   try {
@@ -29,9 +29,7 @@ export async function GET(request: Request) {
       fromSupport: supportMessages.fromSupport, createdAt: supportMessages.createdAt }).from(supportMessages)
       .where(eq(supportMessages.userId, target || account.id)).orderBy(desc(supportMessages.createdAt), asc(supportMessages.id)).limit(100);
     const plan = target ? null : await activePlan(account.id);
-    const whatsapp = config.SUPPORT_WHATSAPP?.trim();
     return responseJson({ admin: account.isAdmin, plan, messages: messages.reverse(),
-      whatsapp: (plan === 'negocio' || plan === 'corporativo') && whatsapp && /^[1-9]\d{7,14}$/.test(whatsapp) ? whatsapp : null,
       executive: plan === 'corporativo' ? config.SUPPORT_EXECUTIVE?.trim() || null : null });
   } catch (error) { return authFailure(error); }
 }

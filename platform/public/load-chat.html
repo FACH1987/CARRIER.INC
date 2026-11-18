@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Chats de cargas · Carrier.INC</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="load-chat.js" defer></script>
+</head>
+<body>
+  <main class="admin-layout">
+    <nav aria-label="Navegación de chats"><a href="market.html#tablero">Volver al tablero</a> · <a href="load-chat.html">Mis chats</a></nav>
+    <h1 id="load-chat-title">Chats de cargas</h1>
+    <p id="load-chat-status" role="status" aria-live="polite">Cargando…</p>
+    <section id="load-chat-content" aria-label="Conversaciones de carga"></section>
+    <form id="load-chat-form" class="post-form" hidden>
+      <p>Escribe aquí para coordinar la carga. Los teléfonos, correos y enlaces de contacto se bloquean.</p>
+      <label class="form-field"><span>Mensaje</span><textarea name="body" rows="4" maxlength="800" required></textarea></label>
+      <button class="button button-dark" type="submit">Enviar mensaje</button>
+    </form>
+  </main>
+</body>
+</html>
