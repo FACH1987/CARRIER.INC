@@ -1,6 +1,8 @@
 const loadList = document.querySelector("#load-list");
 const emptyState = document.querySelector("#empty-state");
 const countElement = document.querySelector("#load-count");
+const quoteNotice = document.querySelector('#quote-notice');
+const starterQuoteDelay = 15 * 60 * 1000;
 const postDialog = document.querySelector("#post-dialog");
 const postForm = document.querySelector("#post-form");
 const searchForm = document.querySelector("#search-form");
@@ -211,6 +213,9 @@ function renderLoads() {
   loadList.innerHTML = visibleLoads.map((load) => {
     const contactEmail = load.isOwner && load.carrierEmail ? load.carrierEmail : load.email;
     const contactControl = `<a class="button contact-button" href="mailto:${escapeHtml(contactEmail)}?subject=${encodeURIComponent(`Consulta sobre carga: ${load.origin} a ${load.destination}`)}" aria-label="Contactar a ${escapeHtml(load.company)} por correo">Contactar <span aria-hidden="true">↗</span></a>`;
+    const quoteControl = currentUser?.role === 'transportista' && !load.isOwner && load.status === 'disponible'
+      ? `<button type="button" class="button button-light button-small" data-quote-load="${escapeHtml(load.id)}">Cotizar</button>`
+      : '';
     const removeControl = load.canDelete === true && signedIn
       ? `<button type="button" class="delete-load-button" data-delete-load="${escapeHtml(load.id)}" ${deletingLoads.has(load.id) || workflowBusy.has(load.id) ? 'disabled' : ''}>${deletingLoads.has(load.id) ? 'Eliminando…' : 'Eliminar'}<span class="sr-only"> carga de ${escapeHtml(load.origin)} a ${escapeHtml(load.destination)}</span></button>` : '';
     return `
@@ -223,10 +228,29 @@ function renderLoads() {
         <div class="load-detail"><span class="detail-label">EQUIPO</span><span class="equipment-pill">${escapeHtml(load.equipment)}</span></div>
         <div class="load-detail"><span class="detail-label">PESO</span><span class="detail-value">${escapeHtml(formatWeight(load.weight))}</span></div>
         <div class="load-detail pay-detail"><span class="detail-label">PAGO OFRECIDO</span><span class="detail-value pay-value">${escapeHtml(formatCurrency(load.pay, load.currency))}</span></div>
-        <div class="load-actions">${contactControl}${workflowControls(load)}${removeControl}</div><div class="load-extra">${workflowSummary(load)}</div>
+        <div class="load-actions">${contactControl}${quoteControl}${workflowControls(load)}${removeControl}</div><div class="load-extra">${workflowSummary(load)}</div>
       </article>`;
   }).join("");
 }
+
+loadList.addEventListener('click', event => {
+  const button = event.target.closest('[data-quote-load]');
+  if (!button || currentUser?.role !== 'transportista') return;
+  const load = loads.find(item => item.id === button.dataset.quoteLoad);
+  if (!load) return;
+  const recentlyPublished = Date.now() < Date.parse(load.createdAt) + starterQuoteDelay;
+  if (!load.corporate && !recentlyPublished) {
+    window.location.href = 'mailto:' + load.email + '?subject=' + encodeURIComponent(`Cotización de flete: ${load.origin} a ${load.destination}`);
+    return;
+  }
+  document.querySelector('#quote-notice-message').textContent = load.corporate
+    ? 'Este es un flete corporativo exclusivo para miembros Elite (con Récord de Policía verificado). Sube tu Récord de Policía y activa tu plan para cotizar ahora.'
+    : 'Este flete está en acceso anticipado. Podrás cotizar 15 minutos después de su publicación con el plan Arrancador.';
+  document.querySelector('#quote-plan-status').hidden = !load.corporate;
+  document.querySelector('#quote-plans-link').hidden = !load.corporate;
+  quoteNotice.showModal();
+});
+document.querySelector('#quote-plans-link').addEventListener('click', () => quoteNotice.close());
 
 document.querySelector('#my-loads').addEventListener('click', async (event) => {
   const button = event.currentTarget;

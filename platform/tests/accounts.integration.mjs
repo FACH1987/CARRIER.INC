@@ -137,6 +137,7 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(listing.user.email, email);
       assert(!('ownerId' in listing.loads.find(row => row.id === load.id)));
       assert.equal(listing.loads.find(row => row.id === load.id).canDelete, true);
+      assert.equal(listing.loads.find(row => row.id === load.id).corporate, true);
       assert.equal((await api('/api/loads', { method: 'POST', cookie, body: cargo, headers: { Origin: 'https://other.example' } })).status, 403);
     });
     await t.test('only the owner can delete cargo, including expired own cargo', async () => {

@@ -1,7 +1,8 @@
 import { usesSupabase } from '../../../db/supabase';
 import { getDb } from '../../../db';
 import { loads, users, carrierVehicles, carrierDrivers } from '../../../db/schema';
-import { and, desc, eq, gte, count, or } from 'drizzle-orm';
+import { and, desc, eq, gte, count, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 import { currentAccount } from '../../../lib/account-auth';
 import { carrierDossier, requireCarrierReady } from '../../../lib/carrier-compliance';
@@ -38,14 +39,15 @@ export async function GET(request: Request) {
     if (usesSupabase()) return json({ error: 'La migración debe incluir las operaciones y comisiones antes de cambiar de base de datos.' }, 503);
     const owner = `account:${user.id}`;
     const db = getDb();
-    const data = await db.select({ load: loads, carrierName: users.name, carrierEmail: users.email, vehiclePlate: carrierVehicles.plate, driverName: carrierDrivers.name, licenseCategory: carrierVehicles.requiredCategory }).from(loads).leftJoin(users, eq(loads.carrierId, users.id)).leftJoin(carrierVehicles, eq(loads.transportVehicleId, carrierVehicles.id)).leftJoin(carrierDrivers, eq(loads.transportDriverId, carrierDrivers.id))
+    const publisher = alias(users, 'publisher');
+    const data = await db.select({ load: loads, publisherRole: publisher.role, carrierName: users.name, carrierEmail: users.email, vehiclePlate: carrierVehicles.plate, driverName: carrierDrivers.name, licenseCategory: carrierVehicles.requiredCategory }).from(loads).leftJoin(users, eq(loads.carrierId, users.id)).leftJoin(publisher, eq(publisher.id, sql<string>`substr(${loads.ownerId}, 9)`)).leftJoin(carrierVehicles, eq(loads.transportVehicleId, carrierVehicles.id)).leftJoin(carrierDrivers, eq(loads.transportDriverId, carrierDrivers.id))
       .where(mine ? or(eq(loads.ownerId, owner), eq(loads.carrierId, user.id)) : and(gte(loads.pickupDate, dayInNicaragua()), eq(loads.status, 'disponible'))).orderBy(desc(loads.createdAt)).limit(500);
-    const visible = data.map(({ load, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
+    const visible = data.map(({ load, publisherRole, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
       const own = user.role !== 'administrador' && load.ownerId === owner;
       const assigned = user.role !== 'administrador' && load.carrierId === user.id;
       const { ownerId, carrierId, deliveryEvidenceId, feeRateBps, feeCents, feeAcceptedAt, ...record } = load;
       const available = own && load.status === 'disponible';
-      return { ...record, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned,
+      return { ...record, corporate: publisherRole === 'empresa', carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned,
         canDelete: available, canAssign: available && schema.shape.pay.safeParse(load.pay).success,
         hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId) };
     });

@@ -12,7 +12,7 @@
     <link rel="icon" href="brand-emblem.png" type="image/png">
     <link rel="stylesheet" href="styles.css?v=carrier-1">
     <link rel="stylesheet" href="plans.css">
-    <script src="app.js?v=plans-1" defer></script>
+    <script src="app.js?v=quote-notice-1" defer></script>
   <link rel="stylesheet" href="document-notices.css?v=1"><script src="document-notices.js?v=mobile-1" defer></script></head>
   <body>
     <header class="topbar">
@@ -246,6 +246,17 @@
           <dt>Número de cuenta</dt><dd id="transfer-number"></dd>
         </dl>
         <button class="button button-dark">Cerrar</button>
+      </form>
+    </dialog>
+    <dialog class="post-dialog account-dialog" id="quote-notice" aria-labelledby="quote-notice-title" aria-describedby="quote-notice-message">
+      <form class="post-form" method="dialog">
+        <h2 id="quote-notice-title">Acceso para cotizar</h2>
+        <p id="quote-notice-message"></p>
+        <p class="account-help" id="quote-plan-status">La activación de planes y la verificación del Récord de Policía aún no están disponibles.</p>
+        <div class="dialog-actions">
+          <button type="submit" class="button button-light" autofocus>Cerrar</button>
+          <a class="button button-dark" href="#planes" id="quote-plans-link">Ver plan Elite</a>
+        </div>
       </form>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
