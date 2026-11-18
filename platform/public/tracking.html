@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>GPS en vivo · Carrier.INC</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="freight-map.js" defer></script>
+  <script src="tracking.js" defer></script>
+</head>
+<body>
+  <main class="admin-layout">
+    <a href="market.html#tablero">Volver al tablero</a>
+    <h1>GPS en vivo del viaje</h1>
+    <p id="tracking-status" role="status" aria-live="polite">Consultando el viaje…</p>
+    <p id="tracking-permission" hidden>Comienza a compartir solo cuando estés en ruta. La empresa que publicó la carga puede ver tu última ubicación mientras mantengas abierta esta página.</p>
+    <button type="button" class="button button-dark" id="tracking-share" hidden>Compartir mi ubicación</button>
+    <button type="button" class="button button-light" id="tracking-map-toggle" hidden>Mostrar en OpenStreetMap</button>
+    <iframe title="Mapa de ubicación del viaje" id="tracking-map" width="100%" height="410" referrerpolicy="no-referrer" hidden></iframe>
+  </main>
+</body>
+</html>

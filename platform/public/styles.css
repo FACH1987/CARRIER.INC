@@ -389,3 +389,5 @@ h1, h2, h3, p { margin-top: 0; }
 .workflow-button { border: 1px solid #bfdbfe; border-radius: 6px; padding: 7px 9px; background: #eff6ff; color: #1d4ed8; font: inherit; font-size: 11px; cursor: pointer; }
 .workflow-button:disabled { opacity: .6; cursor: wait; }
 .freight-quote { padding: 14px; margin: 16px 0; border: 1px solid #bfdbfe; border-radius: 8px; color: #1e40af; background: #eff6ff; line-height: 1.8; font-size: 12px; }
+.delivery-signature { min-width: 0; padding: 12px; border: 1px solid #d7e2f1; border-radius: 8px; }
+.delivery-signature canvas { display: block; width: 100%; height: auto; border: 1px solid #b7c9e5; background: #fff; touch-action: none; margin-bottom: 8px; }

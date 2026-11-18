@@ -141,7 +141,11 @@ CREATE TABLE public."loads" (
   "delivery_evidence_id" text,
   "currency" text NOT NULL DEFAULT 'NIO',
   "customer_type" text,
-  "visibility" text NOT NULL DEFAULT 'estandar'
+  "visibility" text NOT NULL DEFAULT 'estandar',
+  "pickup_latitude" double precision,
+  "pickup_longitude" double precision,
+  "corporate_extras" bigint NOT NULL DEFAULT 0,
+  "delivery_signer" text
 );
 CREATE INDEX "loads_owner_created_idx" ON public."loads" ("owner_id", "created_at");
 CREATE INDEX "loads_pickup_date_idx" ON public."loads" ("pickup_date");
@@ -254,6 +258,27 @@ CREATE INDEX "carrier_ratings_carrier" ON public."carrier_ratings" ("carrier_id"
 ALTER TABLE public."carrier_ratings" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public."carrier_ratings" FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public."carrier_ratings" TO service_role;
+CREATE TABLE public."load_positions" (
+  "load_id" text PRIMARY KEY NOT NULL,
+  "latitude" double precision NOT NULL,
+  "longitude" double precision NOT NULL,
+  "updated_at" text NOT NULL
+);
+ALTER TABLE public."load_positions" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public."load_positions" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."load_positions" TO service_role;
+CREATE TABLE public."support_messages" (
+  "id" text PRIMARY KEY NOT NULL,
+  "user_id" text NOT NULL,
+  "from_support" bigint NOT NULL DEFAULT 0,
+  "body" text NOT NULL,
+  "created_at" text NOT NULL,
+  "priority" bigint NOT NULL DEFAULT 0
+);
+CREATE INDEX "support_messages_user_date" ON public."support_messages" ("user_id", "created_at");
+ALTER TABLE public."support_messages" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public."support_messages" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public."support_messages" TO service_role;
 ALTER TABLE public."bank_accounts" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."sessions" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."carrier_profiles" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
@@ -278,4 +303,6 @@ ALTER TABLE public."subscription_payments" ADD FOREIGN KEY ("user_id") REFERENCE
 ALTER TABLE public."load_quotes" ADD FOREIGN KEY ("carrier_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 ALTER TABLE public."carrier_ratings" ADD FOREIGN KEY ("carrier_id") REFERENCES public."users" ("id") ON DELETE NO ACTION;
 ALTER TABLE public."carrier_ratings" ADD FOREIGN KEY ("load_id") REFERENCES public."loads" ("id") ON DELETE NO ACTION;
+ALTER TABLE public."load_positions" ADD FOREIGN KEY ("load_id") REFERENCES public."loads" ("id") ON DELETE CASCADE;
+ALTER TABLE public."support_messages" ADD FOREIGN KEY ("user_id") REFERENCES public."users" ("id") ON DELETE CASCADE;
 COMMIT;

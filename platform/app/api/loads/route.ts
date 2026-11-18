@@ -30,6 +30,7 @@ const schema = z.object({
   company: text(80), email: z.string().trim().email().max(120),
   customerType: z.enum(customerTypes).optional(),
   visibility: z.enum(loadVisibilities).default('estandar'),
+  pickupLocation: z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).optional(),
 });
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Vary': 'Cookie' } });
 
@@ -50,13 +51,13 @@ export async function GET(request: Request) {
     const visible = data.map(({ load, rating, publisherRole, carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory }) => {
       const own = user.role !== 'administrador' && load.ownerId === owner;
       const assigned = user.role !== 'administrador' && load.carrierId === user.id;
-      const { ownerId, carrierId, deliveryEvidenceId, feeRateBps, feeCents, feeAcceptedAt, ...record } = load;
+      const { ownerId, carrierId, deliveryEvidenceId, deliverySigner, feeRateBps, feeCents, feeAcceptedAt, ...record } = load;
       const available = own && load.status === 'disponible';
       const customerType = customerTypeFor(load.customerType, publisherRole);
       return { ...record, customerType, corporate: customerType === 'empresa', carrierName, carrierEmail, vehiclePlate, driverName, licenseCategory, isOwner: own, isCarrier: assigned,
         rating: own ? rating : null,
         canDelete: available, canAssign: available && schema.shape.pay.safeParse(load.pay).success,
-        hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId) };
+        hasDeliveryEvidence: (own || assigned) && Boolean(deliveryEvidenceId), deliverySigner: own || assigned ? deliverySigner : null };
     });
     return json({ loads: visible, plan: await activePlan(user.id), signedIn: Boolean(user), user });
   } catch (error) {
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     let parsed;
     try { parsed = schema.safeParse(JSON.parse(raw)); } catch { return json({ error: 'La solicitud no es válida.' }, 400); }
     if (!parsed.success) return json({ error: 'Revisa los datos e indica el flete en USD.' }, 400);
-    const details = parsed.data;
+    const { pickupLocation, ...details } = parsed.data;
     const now = new Date().toISOString();
     const plan = await activePlan(user.id, now);
     if ((details.visibility === 'vip' && plan !== 'corporativo') ||
@@ -94,13 +95,14 @@ export async function POST(request: Request) {
       return json({ error: 'La visibilidad seleccionada no está incluida en tu plan.' }, 403);
     }
     const load = { ...details, customerType: customerTypeFor(details.customerType ?? null, user.role),
+      corporateExtras: plan === 'corporativo', pickupLatitude: pickupLocation?.latitude ?? null, pickupLongitude: pickupLocation?.longitude ?? null,
       id: crypto.randomUUID(), createdAt: now, status: 'disponible' as const };
     const limit = user.role === 'empresa' ? (plan === 'corporativo' ? null : plan === 'negocio' ? 25 : 3) : 10;
     const since = user.role === 'empresa' ? nicaraguaMonthStart() : new Date(Date.parse(now) - 86400000).toISOString();
     const [published] = await getDb().all<{ id: string }>(sql`
-      INSERT INTO loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, currency, company, email, created_at, status, fee_rate_bps, customer_type, visibility)
+      INSERT INTO loads (id, owner_id, origin, destination, pickup_date, equipment, weight, pay, currency, company, email, created_at, status, fee_rate_bps, customer_type, visibility, corporate_extras, pickup_latitude, pickup_longitude)
       SELECT ${load.id}, ${ownerId}, ${load.origin}, ${load.destination}, ${load.pickupDate}, ${load.equipment},
-        ${load.weight}, ${load.pay}, ${load.currency}, ${load.company}, ${load.email}, ${now}, 'disponible', 0, ${load.customerType}, ${load.visibility}
+        ${load.weight}, ${load.pay}, ${load.currency}, ${load.company}, ${load.email}, ${now}, 'disponible', 0, ${load.customerType}, ${load.visibility}, ${load.corporateExtras ? 1 : 0}, ${load.pickupLatitude}, ${load.pickupLongitude}
       WHERE ${limit === null ? sql`1` : sql`(SELECT count(*) FROM load_publications WHERE owner_id = ${ownerId} AND created_at >= ${since}) < ${limit}`}
       RETURNING id
     `);

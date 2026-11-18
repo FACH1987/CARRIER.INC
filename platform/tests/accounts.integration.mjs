@@ -497,6 +497,14 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await act('assign', cookie, { carrierEmail: carrierAccount.email })).status, 200);
       assert.equal((await act('accept', cookie)).status, 403);
       assert.equal((await act('accept', carrierSession)).status, 200);
+      const gpsPath = '/api/loads/' + financialLoad.id + '/position';
+      assert.equal((await api(gpsPath, { cookie })).status, 403);
+      await db.prepare('update loads set corporate_extras = 1 where id = ?').bind(financialLoad.id).run();
+      const positionBody = { action: 'position', latitude: 12.13, longitude: -86.25 };
+      assert.equal((await api(gpsPath, { cookie: adminCookie })).status, 404);
+      assert.equal((await api(gpsPath, { method: 'POST', cookie, body: positionBody })).status, 403);
+      assert.equal((await api(gpsPath, { method: 'POST', cookie: carrierSession, body: positionBody })).status, 200);
+      assert.equal((await (await api(gpsPath, { cookie })).json()).position.latitude, 12.13);
       assert.equal((await act('cancel_assignment')).status, 409);
       assert.equal((await api('/api/loads/' + financialLoad.id, { method: 'DELETE', cookie })).status, 409);
       assert.equal((await api('/api/admin/users/' + carrierAccount.id, { method: 'DELETE', cookie: adminCookie })).status, 409);
@@ -515,6 +523,10 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       };
       assert.equal((await uploadEvidence(carrierSession)).status, 400);
       photos.set('cargo', png, 'cargo.png');
+      photos.set('signature', png, 'signature.png');
+      photos.set('signer', 'Receptor de prueba');
+      assert.equal((await uploadEvidence(carrierSession)).status, 400);
+      photos.set('signatureConsent', 'true');
       assert.equal((await uploadEvidence(cookie)).status, 403);
       assert.equal((await uploadEvidence(carrierSession)).status, 200);
       assert.equal((await uploadEvidence(carrierSession)).status, 409);
@@ -523,6 +535,10 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal(receipt.headers.get('cache-control'), 'private, no-store');
       assert.deepEqual(await receipt.arrayBuffer(), await png.arrayBuffer());
       assert.equal((await runtime.dispatchFetch(evidence + '?photo=cargo')).status, 401);
+      const signedDelivery = await runtime.dispatchFetch(evidence + '?photo=signature', { headers: { Cookie: cookie } });
+      assert.equal(signedDelivery.status, 200);
+      assert.equal((await (await api(gpsPath, { cookie })).json()).position, null);
+      assert.equal((await api(gpsPath, { method: 'POST', cookie: carrierSession, body: positionBody })).status, 409);
       const transferDetails = session => api('/api/bank-account', {
         method: 'POST', cookie: session, body: { action: 'direct-transfer', loadId: financialLoad.id },
       });
@@ -583,6 +599,14 @@ test('local accounts, private carrier documents, verified dispatch and commissio
       assert.equal((await verifySubscription(subscriptionPayment)).status, 200);
       const activeSubscription = (await (await api(subscriptions, { cookie })).json()).active;
       assert.equal(activeSubscription.plan, 'negocio');
+      const supportPath = '/api/support';
+      assert.equal((await api(supportPath, { method: 'POST', cookie, body: { body: 'Consulta de prueba' } })).status, 201);
+      const supportInbox = await (await api(supportPath, { cookie: adminCookie })).json();
+      const supportThread = supportInbox.conversations.find(thread => thread.priority === 1);
+      assert(supportThread);
+      assert.equal((await api(supportPath + '?userId=' + supportThread.id, { cookie: carrierSession })).status, 403);
+      assert.equal((await api(supportPath, { method: 'POST', cookie: adminCookie, body: { userId: supportThread.id, body: 'Respuesta de prueba' } })).status, 201);
+      assert((await (await api(supportPath, { cookie })).json()).messages.some(message => message.fromSupport));
       const featured = await api('/api/loads', { method: 'POST', cookie,
         body: { ...freight, customerType: 'comercio', visibility: 'destacada' } });
       assert.equal(featured.status, 201);

@@ -8,6 +8,14 @@ Desde **Planes → Gestionar suscripción**, la cuenta genera una referencia por
 
 Configurar `SUBSCRIPTION_BANK_ACCOUNT` en Sites con un objeto JSON que contenga `bank`, `holder`, `number`, `type` (`ahorro` o `corriente`) y `currency: "USD"`. Sin esa cuenta, la app no emite referencias de cobro. La verificación registra la vigencia del plan. Los cupos y beneficios anunciados en el catálogo requieren su implementación correspondiente.
 
+## Ubicación, comprobantes y soporte
+
+La publicación puede incluir coordenadas de recogida para mostrarlas en el mapa a usuarios registrados. El transportista activa los avisos de cercanía desde el tablero. Su ubicación se compara en el navegador con las cargas destacadas y VIP en un radio de 5 km. El sonido de las cargas VIP requiere que el navegador permita audio y que el tablero esté abierto y visible.
+
+Las cargas publicadas con Corporativo incluyen el GPS y la firma del receptor. El GPS requiere que el transportista asignado autorice y mantenga abierta la página del viaje. Se conserva la última posición, visible para las partes del viaje, y se retira al detener el envío o reportar la entrega. El mapa usa OpenStreetMap cuando se abre. La firma se adjunta al expediente privado con el nombre y la autorización del receptor.
+
+El administrador responde desde **Soporte**. Negocio tiene prioridad en la bandeja y Corporativo tiene el nivel más alto. Configurar `SUPPORT_WHATSAPP` con el número comercial en formato internacional sin el signo + y `SUPPORT_EXECUTIVE` con el nombre del ejecutivo designado de Corporativo.
+
 ## Desarrollo
 
 - `npm ci`

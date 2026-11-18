@@ -114,6 +114,9 @@ export const loads = sqliteTable('loads', {
   company: text('company').notNull(), email: text('email').notNull(),
   customerType: text('customer_type', { enum: ['particular', 'comercio', 'empresa'] }),
   visibility: text('visibility', { enum: ['estandar', 'destacada', 'vip'] }).notNull().default('estandar'),
+  pickupLatitude: real('pickup_latitude'), pickupLongitude: real('pickup_longitude'),
+  corporateExtras: integer('corporate_extras', { mode: 'boolean' }).notNull().default(false),
+  deliverySigner: text('delivery_signer'),
   createdAt: text('created_at').notNull(),
   status: text('status', { enum: ['disponible', 'asignada', 'en_transito', 'entregada', 'finalizada'] }).notNull().default('disponible'),
   carrierId: text('carrier_id').references(() => users.id, { onDelete: 'restrict' }),
@@ -124,6 +127,19 @@ export const loads = sqliteTable('loads', {
   feeCents: integer('fee_cents').notNull().default(0),
   feeAcceptedAt: text('fee_accepted_at')
 }, (t) => [index('loads_pickup_date_idx').on(t.pickupDate), index('loads_owner_created_idx').on(t.ownerId, t.createdAt)]);
+export const loadPositions = sqliteTable('load_positions', {
+  loadId: text('load_id').primaryKey().references(() => loads.id, { onDelete: 'cascade' }),
+  latitude: real('latitude').notNull(), longitude: real('longitude').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+export const supportMessages = sqliteTable('support_messages', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  fromSupport: integer('from_support', { mode: 'boolean' }).notNull().default(false),
+  body: text('body').notNull(),
+  createdAt: text('created_at').notNull(),
+  priority: integer('priority').notNull().default(0),
+}, (t) => [index('support_messages_user_date').on(t.userId, t.createdAt)]);
 
 export const commissions = sqliteTable('commissions', {
   id: text('id').primaryKey(),

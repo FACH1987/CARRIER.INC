@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '../../../../../db';
-import { loads } from '../../../../../db/schema';
+import { loadPositions, loads } from '../../../../../db/schema';
 import { usesSupabase } from '../../../../../db/supabase';
 import { AuthError, authFailure, currentAccount, requireSameOrigin, responseJson } from '../../../../../lib/account-auth';
 import { documentBucket, limitedBody } from '../../../../../lib/document-storage';
@@ -48,13 +48,22 @@ export async function POST(request: Request, context: Context) {
       throw new AuthError('Esta carga no admite nuevas fotos de entrega.', 409);
     const contentType = request.headers.get('content-type') || '';
     if (!contentType.startsWith('multipart/form-data;')) throw new AuthError('Adjunta las dos fotos.', 415);
-    const bytes = await limitedBody(request, 2 * maxPhotoBytes + 64 * 1024);
+    const bytes = await limitedBody(request, 3 * maxPhotoBytes + 64 * 1024);
     const form = await new Response(new Uint8Array(bytes), { headers: { 'Content-Type': contentType } })
       .formData().catch(() => { throw new AuthError('No se pudieron leer las fotos.'); });
     const photos = await Promise.all(photoNames.map(name => readPhoto(form.get(name))));
+    const signer = typeof form.get('signer') === 'string' ? String(form.get('signer')).trim() : '';
+    const signature = form.get('signature');
+    if ((signer || signature) && (!load.corporateExtras || signer.length < 2 || signer.length > 120 || form.get('signatureConsent') !== 'true'))
+      throw new AuthError('Para adjuntar la firma, indica el nombre del receptor y registra su autorización.');
+    const attached = [...photoNames] as string[];
+    if (signer || signature) {
+      photos.push(await readPhoto(signature));
+      attached.push('signature');
+    }
     const evidenceId = crypto.randomUUID();
     const bucket = documentBucket();
-    const keys = photoNames.map(name => evidenceKey(load.id, evidenceId, name));
+    const keys = attached.map(name => evidenceKey(load.id, evidenceId, name));
     try {
       for (const [index, photo] of photos.entries()) {
         await bucket.put(keys[index], photo.buffer, { httpMetadata: { contentType: photo.type } });
@@ -67,12 +76,14 @@ export async function POST(request: Request, context: Context) {
       status: 'entregada',
       deliveredAt: load.deliveredAt || new Date().toISOString(),
       deliveryEvidenceId: evidenceId,
+      deliverySigner: signer || null,
     }).where(and(eq(loads.id, load.id), eq(loads.status, load.status),
       eq(loads.carrierId, load.carrierId!), isNull(loads.deliveryEvidenceId))).returning({ id: loads.id });
     if (!updated.length) {
       await bucket.delete(keys).catch(() => {});
       throw new AuthError('La carga cambió. Actualiza el tablero.', 409);
     }
+    await db.delete(loadPositions).where(eq(loadPositions.loadId, load.id));
     return responseJson({ status: 'entregada' });
   } catch (error) { return authFailure(error); }
 }
@@ -82,7 +93,7 @@ export async function GET(request: Request, context: Context) {
     const { load, owner, carrier } = await loadAccess(request, context);
     if (!owner && !carrier) throw new AuthError('No tienes acceso a estas fotos.', 403);
     const photo = new URL(request.url).searchParams.get('photo');
-    if ((photo !== 'receipt' && photo !== 'cargo') || !load.deliveryEvidenceId)
+    if ((photo !== 'receipt' && photo !== 'cargo' && !(photo === 'signature' && load.deliverySigner)) || !load.deliveryEvidenceId)
       throw new AuthError('Foto no encontrada.', 404);
     const object = await documentBucket().get(evidenceKey(load.id, load.deliveryEvidenceId, photo));
     if (!object) throw new AuthError('Foto no encontrada.', 404);

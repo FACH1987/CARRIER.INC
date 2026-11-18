@@ -6,6 +6,12 @@ const quoteDialog = document.querySelector('#quote-dialog');
 const quoteForm = document.querySelector('#quote-form');
 const ratingDialog = document.querySelector('#rating-dialog');
 const ratingForm = document.querySelector('#rating-form');
+const nearbyButton = document.querySelector('#nearby-alerts');
+const pickupMap = document.querySelector('#pickup-map');
+const alertedLoads = new Set();
+let nearbyWatch = null;
+let nearbyPosition = null;
+let alertAudio = null;
 const starterQuoteDelay = 15 * 60 * 1000;
 let viewerPlan = null;
 const visibilityRank = { estandar: 0, destacada: 1, vip: 2 };
@@ -53,6 +59,8 @@ function setAccount(user) {
   const changed = currentUser?.id !== user?.id || currentUser?.role !== user?.role;
   currentUser = user;
   signedIn = Boolean(user);
+  nearbyButton.hidden = user?.role !== 'transportista';
+  if (user?.role !== 'transportista') stopNearbyAlerts();
   document.querySelectorAll('[data-plan-register]').forEach(button => { button.hidden = signedIn; });
   document.querySelector('#admin-open').hidden = !user?.isAdmin;
   document.querySelector('#commissions-open').hidden = !user?.isAdmin;
@@ -155,6 +163,7 @@ async function updateLoads() {
     document.querySelector('#sign-in').hidden = signedIn;
     document.querySelector('#connection-status').textContent = 'Conectado · Las cargas se comparten entre dispositivos. Actualización cada 30 segundos.';
     renderLoads();
+    checkNearbyLoads();
     if (signedIn && new URLSearchParams(window.location.search).get('publicar') === '1') {
       const url = new URL(window.location.href);
       url.searchParams.delete('publicar');
@@ -230,6 +239,10 @@ function renderLoads() {
     const quoteListControl = load.isOwner
       ? `<button type="button" class="button button-light button-small" data-quote-list="${escapeHtml(load.id)}">Ver cotizaciones</button>`
       : '';
+    const mapControl = load.pickupLatitude != null && load.pickupLongitude != null
+      ? `<button type="button" class="button button-light button-small" data-pickup-map="${escapeHtml(load.id)}">Mapa de recogida</button>` : '';
+    const trackingControl = load.corporateExtras && load.status === 'en_transito' && (load.isOwner || load.isCarrier)
+      ? `<a class="button button-light button-small" href="tracking.html?load=${encodeURIComponent(load.id)}">GPS en vivo</a>` : '';
     const removeControl = load.canDelete === true && signedIn
       ? `<button type="button" class="delete-load-button" data-delete-load="${escapeHtml(load.id)}" ${deletingLoads.has(load.id) || workflowBusy.has(load.id) ? 'disabled' : ''}>${deletingLoads.has(load.id) ? 'Eliminando…' : 'Eliminar'}<span class="sr-only"> carga de ${escapeHtml(load.origin)} a ${escapeHtml(load.destination)}</span></button>` : '';
     return `
@@ -243,10 +256,70 @@ function renderLoads() {
         <div class="load-detail"><span class="detail-label">EQUIPO</span><span class="equipment-pill">${escapeHtml(load.equipment)}</span></div>
         <div class="load-detail"><span class="detail-label">PESO</span><span class="detail-value">${escapeHtml(formatWeight(load.weight))}</span></div>
         <div class="load-detail pay-detail"><span class="detail-label">PAGO OFRECIDO</span><span class="detail-value pay-value">${escapeHtml(formatCurrency(load.pay, load.currency))}</span></div>
-        <div class="load-actions">${contactControl}${quoteControl}${quoteListControl}${workflowControls(load)}${removeControl}</div><div class="load-extra">${workflowSummary(load)}</div>
+        <div class="load-actions">${contactControl}${mapControl}${trackingControl}${quoteControl}${quoteListControl}${workflowControls(load)}${removeControl}</div><div class="load-extra">${workflowSummary(load)}</div>
       </article>`;
   }).join("");
 }
+
+function stopNearbyAlerts() {
+  if (nearbyWatch !== null) navigator.geolocation.clearWatch(nearbyWatch);
+  nearbyWatch = null;
+  nearbyPosition = null;
+  alertedLoads.clear();
+  nearbyButton.setAttribute('aria-pressed', 'false');
+  nearbyButton.textContent = 'Activar avisos cercanos';
+  if (alertAudio) alertAudio.close().catch(() => {});
+  alertAudio = null;
+}
+
+function checkNearbyLoads() {
+  if (!nearbyPosition || mineOnly || document.hidden) return;
+  const matches = loads.filter(load => ['vip', 'destacada'].includes(load.visibility)
+    && load.status === 'disponible' && load.pickupLatitude != null && load.pickupLongitude != null
+    && !alertedLoads.has(load.id) && freightDistanceKm(nearbyPosition, { latitude: load.pickupLatitude, longitude: load.pickupLongitude }) <= 5);
+  if (!matches.length) return;
+  matches.forEach(load => alertedLoads.add(load.id));
+  if (matches.some(load => load.visibility === 'vip') && alertAudio?.state === 'running') {
+    const source = alertAudio.createOscillator();
+    const gain = alertAudio.createGain();
+    source.frequency.value = 700;
+    gain.gain.value = 0.12;
+    source.connect(gain).connect(alertAudio.destination);
+    source.start();
+    source.stop(alertAudio.currentTime + 0.4);
+  }
+  showToast(matches.length === 1 ? 'Flete cercano: ' + matches[0].origin + ' → ' + matches[0].destination : matches.length + ' fletes destacados o VIP a menos de 5 km.');
+}
+
+nearbyButton.addEventListener('click', () => {
+  if (nearbyWatch !== null) { stopNearbyAlerts(); return; }
+  if (!navigator.geolocation) { showToast('Tu navegador no ofrece ubicación.'); return; }
+  const Audio = window.AudioContext || window.webkitAudioContext;
+  if (Audio) {
+    alertAudio = new Audio();
+    alertAudio.resume().catch(() => {});
+  }
+  nearbyWatch = navigator.geolocation.watchPosition(({ coords }) => {
+    if (nearbyWatch === null) return;
+    nearbyPosition = coords;
+    checkNearbyLoads();
+  }, () => {
+    stopNearbyAlerts();
+    showToast('Permite la ubicación para recibir avisos de fletes cercanos.');
+  }, { maximumAge: 30_000, timeout: 20_000 });
+  nearbyButton.setAttribute('aria-pressed', 'true');
+  nearbyButton.textContent = 'Desactivar avisos cercanos';
+});
+window.addEventListener('pagehide', stopNearbyAlerts);
+pickupMap.addEventListener('close', () => pickupMap.querySelector('iframe').removeAttribute('src'));
+loadList.addEventListener('click', event => {
+  const button = event.target.closest('[data-pickup-map]');
+  if (!button) return;
+  const load = loads.find(item => item.id === button.dataset.pickupMap);
+  if (!load || load.pickupLatitude == null || load.pickupLongitude == null) return;
+  pickupMap.querySelector('iframe').src = freightMapUrl(load.pickupLatitude, load.pickupLongitude);
+  pickupMap.showModal();
+});
 
 function showQuoteNotice(message, corporate) {
   document.querySelector('#quote-notice-message').textContent = message;
@@ -387,6 +460,14 @@ function workflowControls(load) {
     html += `<form class="post-form" data-delivery-form="${escapeHtml(load.id)}">
       <label class="form-field"><span>Foto del documento de recibido del cliente en destino</span><input type="file" name="receipt" accept="image/jpeg,image/png" required></label>
       <label class="form-field"><span>Foto de la carga en el lugar de entrega</span><input type="file" name="cargo" accept="image/jpeg,image/png" required></label>
+      ${load.corporateExtras ? `<fieldset class="delivery-signature"><legend>Firma del receptor</legend>
+        <label class="form-field"><span>Nombre completo del receptor</span><input name="signer" maxlength="120"></label>
+        <p>El receptor puede firmar en el recuadro o adjuntar una imagen de su firma.</p>
+        <canvas width="600" height="210" aria-label="Área para dibujar la firma" data-signature-canvas></canvas>
+        <button class="button button-light button-small" type="button" data-signature-clear>Borrar firma dibujada</button>
+        <label class="form-field"><span>Adjuntar imagen de firma</span><input type="file" name="signatureFile" accept="image/jpeg,image/png"></label>
+        <label class="form-note"><input type="checkbox" name="signatureConsent" value="true"> El receptor autorizó guardar su firma con el comprobante de esta entrega.</label>
+      </fieldset>` : ''}
       <button type="submit" class="workflow-button" ${workflowBusy.has(load.id) ? 'disabled' : ''}>Reportar entrega</button>
     </form>`;
   }
@@ -403,8 +484,11 @@ function workflowSummary(load) {
   const evidence = load.hasDeliveryEvidence
     ? `<span><a href="${evidenceUrl}receipt" target="_blank" rel="noopener">Ver documento de recibido</a> · <a href="${evidenceUrl}cargo" target="_blank" rel="noopener">Ver foto de la carga</a></span>`
     : '';
+  const signature = load.deliverySigner
+    ? `<span>Recibió ${escapeHtml(load.deliverySigner)} · <a href="${evidenceUrl}signature" target="_blank" rel="noopener">Ver firma de entrega</a></span>`
+    : '';
   const rating = load.rating != null ? '<span>Calificación del transportista: ' + escapeHtml(load.rating) + '/5</span>' : '';
-  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + evidence + rating;
+  return '<span class="shipment-status">' + status + '</span>' + carrier + unit + evidence + signature + rating;
 }
 async function workflowRequest(id, payload) {
   const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -489,6 +573,43 @@ loadList.addEventListener('click', async event => {
   } catch (error) { showToast(error.message || 'Revisa tu conexión.'); }
   finally { workflowBusy.delete(load.id); renderLoads(); }
 });
+let signatureStroke = null;
+function signaturePoint(event, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: (event.clientX - rect.left) * canvas.width / rect.width,
+    y: (event.clientY - rect.top) * canvas.height / rect.height };
+}
+loadList.addEventListener('pointerdown', event => {
+  const canvas = event.target.closest('[data-signature-canvas]');
+  if (!canvas || signatureStroke || event.button !== 0) return;
+  canvas.setPointerCapture(event.pointerId);
+  signatureStroke = { canvas, id: event.pointerId, last: signaturePoint(event, canvas) };
+});
+loadList.addEventListener('pointermove', event => {
+  if (signatureStroke?.id !== event.pointerId) return;
+  const { canvas, last } = signatureStroke;
+  const point = signaturePoint(event, canvas);
+  const context = canvas.getContext('2d');
+  context.lineWidth = 4;
+  context.lineCap = 'round';
+  context.strokeStyle = '#152d52';
+  context.beginPath();
+  context.moveTo(last.x, last.y);
+  context.lineTo(point.x, point.y);
+  context.stroke();
+  signatureStroke.last = point;
+  canvas.dataset.signed = 'true';
+});
+loadList.addEventListener('lostpointercapture', event => {
+  if (signatureStroke?.id === event.pointerId) signatureStroke = null;
+});
+loadList.addEventListener('click', event => {
+  const button = event.target.closest('[data-signature-clear]');
+  if (!button) return;
+  const canvas = button.closest('fieldset').querySelector('canvas');
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  delete canvas.dataset.signed;
+});
 loadList.addEventListener('submit', async event => {
   const form = event.target.closest('[data-delivery-form]');
   if (!form) return;
@@ -500,6 +621,15 @@ loadList.addEventListener('submit', async event => {
   workflowBusy.add(id);
   button.disabled = true;
   try {
+    const attachment = photos.get('signatureFile');
+    photos.delete('signatureFile');
+    const canvas = form.querySelector('canvas[data-signed]');
+    if (attachment?.size) photos.set('signature', attachment);
+    else if (canvas) {
+      const signature = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!signature) throw new Error('No se pudo guardar la firma. Vuelve a dibujarla.');
+      photos.set('signature', signature, 'firma.png');
+    }
     const response = await fetch('/api/loads/' + encodeURIComponent(id) + '/delivery-evidence', { method: 'POST', body: photos });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'No pudimos guardar las fotos.');
@@ -605,6 +735,16 @@ async function openPostDialog() {
   if (!postDialog.open) postDialog.showModal();
 }
 
+document.querySelector('#pickup-location').addEventListener('click', () => {
+  const locationStatus = document.querySelector('#pickup-location-status');
+  if (!navigator.geolocation) { locationStatus.textContent = 'Ingresa las coordenadas de recogida manualmente.'; return; }
+  navigator.geolocation.getCurrentPosition(({ coords }) => {
+    postForm.elements.pickupLatitude.value = coords.latitude;
+    postForm.elements.pickupLongitude.value = coords.longitude;
+    locationStatus.textContent = 'Punto listo. Se mostrará a usuarios registrados al publicar.';
+  }, () => { locationStatus.textContent = 'No se pudo obtener tu ubicación. Puedes ingresar el punto manualmente.'; }, { timeout: 15_000 });
+});
+
 document.querySelector("#open-post-top").addEventListener("click", openPostDialog);
 document.querySelector("#open-post-hero").addEventListener("click", openPostDialog);
 document.querySelector("#empty-post").addEventListener("click", openPostDialog);
@@ -619,6 +759,14 @@ postForm.addEventListener("submit", async (event) => {
   if (!postForm.reportValidity()) return;
 
   const formData = new FormData(postForm);
+  const latitude = formData.get('pickupLatitude');
+  const longitude = formData.get('pickupLongitude');
+  if (Boolean(latitude) !== Boolean(longitude)) {
+    const error = document.querySelector('#publish-error');
+    error.textContent = 'Indica ambas coordenadas de recogida.';
+    error.hidden = false;
+    return;
+  }
   const newLoad = {
     origin: String(formData.get("origin")).trim(),
     destination: String(formData.get("destination")).trim(),
@@ -630,6 +778,7 @@ postForm.addEventListener("submit", async (event) => {
     company: String(formData.get("company")).trim(),
     customerType: String(formData.get("customerType")),
     visibility: String(formData.get("visibility")),
+    ...(latitude && longitude ? { pickupLocation: { latitude: Number(latitude), longitude: Number(longitude) } } : {}),
     email: String(formData.get("email")).trim(),
   };
 
@@ -766,5 +915,7 @@ refreshLoads();
 window.setInterval(() => {
   const selectingPhotos = [...loadList.querySelectorAll('[data-delivery-form] input[type="file"]')]
     .some(input => input.files.length || input === document.activeElement);
-  if (!selectingPhotos) refreshLoads();
+  const draftingSignature = signatureStroke || loadList.querySelector('canvas[data-signed]')
+    || [...loadList.querySelectorAll('[name="signer"]')].some(input => input.value || input === document.activeElement);
+  if (!selectingPhotos && !draftingSignature) refreshLoads();
 }, 30000);
