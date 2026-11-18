@@ -28,7 +28,7 @@ El hosting Sites aplica las migraciones de producción durante el despliegue. La
 
 Las cargas solo pueden consultarse con una cuenta de empresa o transportista y una sesión iniciada. Publicarlas requiere una cuenta de Carrier.INC con correo y contraseña. Las consultas, cotizaciones y asignaciones se coordinan en **Mis chats**. Las publicaciones y cotizaciones omiten el correo y teléfono de las partes. No se importan los datos del almacenamiento local del prototipo.
 
-Web: [Carrier.INC Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
+Web: [Carrier.INC Nicaragua](https://carrierinc.gueguensedigital.com).
 
 Identidad visual: Carrier.INC por Güegüense Digital, con azul marino, azul eléctrico y celeste.
 

@@ -15,7 +15,7 @@ Desde `platform/`, instala dependencias con `npm ci` y arranca con `npm run dev`
 
 ## Alojamiento
 
-El proyecto de Sites y la conexión D1 se declaran en `platform/.openai/hosting.json`. Enlace de la web: [Carrier.INC Nicaragua](https://rutacarga-nicaragua.green-sky-5486.chatgpt.site).
+El proyecto de Sites y la conexión D1 se declaran en `platform/.openai/hosting.json`. Enlace de la web: [Carrier.INC Nicaragua](https://carrierinc.gueguensedigital.com).
 
 ## Base de datos elegida
 
